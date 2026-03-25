@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"
 
 services:
   backend:
@@ -6,12 +6,11 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - data:/data
+      - ./data:/data
 
   frontend:
     build: ./frontend
     ports:
       - "3000:3000"
-
-volumes:
-  data:
+    environment:
+      - WDS_SOCKET_PORT=0
