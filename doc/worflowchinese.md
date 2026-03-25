@@ -35,16 +35,10 @@
 
 
 
-# GitHub Actions 执行流程示意图
+##GitHub Actions 执行流程示意图 数据流说明
 
-## 数据流说明
 
-- **抓取数据** → Python Scraper → 输出原始 JSON/CSV  
-- **数据清洗 & 分类** → 输出整理后的 JSON  
-- **AI 处理** → GPT API 摘要、生成 Markdown  
-- **输出 & 存储** → GitHub Repo + 本地存档  
-- **通知** → 可选推送到邮箱或 Slack  
-
+ 
 ---
 
 ```text
