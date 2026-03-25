@@ -1,22 +1,40 @@
-version: "3"
+version: "3.9"  # Use latest 3.x version for modern features
 
 services:
   agent:
-    build: ./agent
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
     volumes:
-      - data:/data
+      - data:/data           # Persistent storage shared with backend
+      - ./agent:/app          # Mount local source for dev
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - backend
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "8000:8000"           # Expose backend API
     volumes:
-      - data:/data
+      - data:/data            # Shared persistent data
+      - ./backend:/app        # Mount local source for dev
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "3000:3000"           # Frontend web UI
+    volumes:
+      - ./frontend:/app       # Mount local frontend source for dev
+    environment:
+      - REACT_APP_API_URL=http://backend:8000
 
 volumes:
-  data:
+  data:                       # Named volume for persistent storage
