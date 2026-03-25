@@ -1,186 +1,116 @@
-import requests
-import json
 import os
+import json
 import time
-import re
-
+import logging
+from urllib.parse import urljoin
 from parsers.generic_parser import parse_generic
+import requests
 from openai import OpenAI
 
 # ---------- CONFIG ----------
 WEBLINK = "weblink.md"
-OUTPUT = "/data/courses_latest.json"
+OUTPUT_DIR = os.getenv("COURSES_OUTPUT_DIR", "data")
+OUTPUT_FILE = os.path.join(OUTPUT_DIR, "courses_latest.json")
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+    "User-Agent": os.getenv(
+        "HTTP_USER_AGENT", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+    )
 }
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+logging.basicConfig(format="%(asctime)s [%(levelname)s] %(message)s", level=logging.INFO)
+
+# ---------- OPENAI CLIENT ----------
+api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=api_key) if api_key else None
+if not client:
+    logging.warning("OPENAI_API_KEY not set. AI filtering will be skipped.")
 
 # ---------- SAFE AI PARSER ----------
 def safe_parse_ai(content):
+    content = content.strip()
     try:
-        return json.loads(content)
+        data = json.loads(content)
+        return data.get("courses", data) if isinstance(data, dict) else data
     except:
-        match = re.search(r"\[.*\]", content, re.S)
+        match = re.search(r"(\[.*\])", content, re.S)
         if match:
             try:
-                return json.loads(match.group())
+                return json.loads(match.group(1))
             except:
                 pass
-        print("⚠️ AI JSON parsing failed")
-        return []
+    logging.warning("AI JSON parsing failed.")
+    return []
 
-# ---------- READ LINKS ----------
-def read_links():
-    sites = []
-    with open(WEBLINK) as f:
-        for line in f:
-            line = line.strip()
-
-            if not line or line.startswith("#"):
-                continue
-
-            if "," not in line:
-                continue
-
-            url, cat = line.split(",", 1)
-            sites.append((url.strip(), cat.strip()))
-
-    return sites
-
-# ---------- FETCH WITH RETRY ----------
-def fetch(url):
-    for attempt in range(2):
+# ---------- FETCH WITH RETRIES ----------
+def fetch(url, retries=3, timeout=15):
+    for attempt in range(1, retries + 1):
         try:
-            res = requests.get(url, headers=HEADERS, timeout=10)
+            res = requests.get(url, headers=HEADERS, timeout=timeout)
             if res.status_code == 200:
+                res.encoding = res.apparent_encoding
                 return res.text
         except Exception as e:
-            print(f"⚠️ retry {attempt+1} failed for {url}: {e}")
-
-        time.sleep(1)
-
+            logging.warning(f"Attempt {attempt} failed for {url}: {e}")
+        time.sleep(attempt * 2)
     return None
-
-# ---------- DEDUP ----------
-def deduplicate(courses):
-    seen = set()
-    unique = []
-
-    for c in courses:
-        key = (c.get("title"), c.get("link"))
-        if key not in seen:
-            seen.add(key)
-            unique.append(c)
-
-    return unique
-
-# ---------- PRE-FILTER (LOCATION) ----------
-def pre_filter(courses):
-    result = []
-
-    for c in courses:
-        text = (c.get("title", "") + c.get("location", "")).lower()
-
-        if any(k in text for k in ["san jose", "bay area", "cupertino", "santa clara"]):
-            result.append(c)
-
-    return result or courses  # fallback if empty
-
-# ---------- AI FILTER ----------
-def ai_filter_and_rank(courses):
-    if not courses:
-        return []
-
-    sample = courses[:30]  # cost control
-
-    prompt = f"""
-You are a smart assistant helping parents find kids classes.
-
-TASK:
-1. Keep only REAL kids courses (remove navigation, login, ads)
-2. Prefer age 6-8
-3. Prefer San Jose / Bay Area
-4. Rank best courses first
-
-IMPORTANT:
-Use the structured fields (age, location, schedule, price) when ranking.
-
-Return STRICT JSON:
-
-[
-  {{
-    "title": "...",
-    "link": "...",
-    "category": "...",
-    "age": "...",
-    "location": "...",
-    "score": 1-5,
-    "reason": "short reason"
-  }}
-]
-
-DATA:
-{json.dumps(sample, indent=2)}
-"""
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
-        )
-
-        content = response.choices[0].message.content
-
-        return safe_parse_ai(content)
-
-    except Exception as e:
-        print(f"❌ AI failed: {e}")
-        return courses  # fallback
 
 # ---------- MAIN ----------
 def run():
     all_courses = []
 
-    sites = read_links()
+    if not os.path.exists(WEBLINK):
+        logging.error(f"{WEBLINK} not found.")
+        return
 
-    for url, cat in sites:
-        print(f"🔍 Scraping: {url}")
+    with open(WEBLINK, "r", encoding="utf-8") as f:
+        sites = [line.strip().split(",", 1) for line in f if "," in line and not line.startswith("#")]
 
+    for url_raw, cat_raw in sites:
+        url, cat = url_raw.strip(), cat_raw.strip()
         html = fetch(url)
-        if not html:
-            print(f"❌ Failed: {url}")
-            continue
+        if not html: continue
+        try:
+            courses = parse_generic(html, cat, url) or []
+            for c in courses:
+                if c.get("link") and not str(c["link"]).startswith("http"):
+                    c["link"] = urljoin(url, c["link"])
+            all_courses.extend(courses)
+        except Exception as e:
+            logging.error(f"Error parsing {url}: {e}")
 
-        courses = parse_generic(html, cat, url)
-        all_courses.extend(courses)
+    # Deduplicate
+    unique_dict = {(c.get("title","").lower(), c.get("link","")): c for c in all_courses}
+    unique_list = list(unique_dict.values())
 
-        time.sleep(1)  # rate limit
+    # Pre-filter
+    keywords = ["san jose", "bay area", "cupertino", "santa clara", "sunnyvale", "mountain view"]
+    filtered = [c for c in unique_list if any(k in f"{c.get('title','')} {c.get('location','')}".lower() for k in keywords)]
+    final_list = filtered if filtered else unique_list[:40]
 
-    # ---------- deduplicate ----------
-    all_courses = deduplicate(all_courses)
+    # AI filtering
+    use_ai = os.getenv("USE_AI","true").lower() == "true"
+    if use_ai and client and final_list:
+        prompt = f"Filter real kids classes (Age 6-8) in South Bay. Return JSON object with key 'courses'.\nDATA: {json.dumps(final_list[:40])}"
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role":"system","content":"You are a JSON assistant."},
+                    {"role":"user","content":prompt}
+                ],
+                response_format={"type":"json_object"},
+                temperature=0.1
+            )
+            final_list = safe_parse_ai(response.choices[0].message.content)
+        except Exception as e:
+            logging.error(f"AI ranking failed: {e}")
 
-    # ---------- pre-filter ----------
-    all_courses = pre_filter(all_courses)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(final_list, f, indent=2, ensure_ascii=False)
 
-    # ---------- AI filter ----------
-    use_ai = os.getenv("USE_AI", "true").lower() == "true"
+    logging.info(f"Saved {len(final_list)} courses to {OUTPUT_FILE}")
 
-    if use_ai:
-        print("🤖 Running AI filter...")
-        all_courses = ai_filter_and_rank(all_courses)
-
-    # ---------- save ----------
-    os.makedirs("/data", exist_ok=True)
-
-    with open(OUTPUT, "w") as f:
-        json.dump(all_courses, f, indent=2)
-
-    print(f"✅ Saved {len(all_courses)} courses")
-
-
-# ---------- ENTRY ----------
 if __name__ == "__main__":
     run()
