@@ -9,7 +9,7 @@ def extract_age(text):
     patterns = [
         r'(\d{1,2})\s*[-–]\s*(\d{1,2})',
         r'ages?\s*(\d{1,2})\s*[-–]\s*(\d{1,2})',
-        r'(\d{1,2})\s*\+\s*'
+        r'(\d{1,2})\s*\+'
     ]
     for p in patterns:
         match = re.search(p, text)
@@ -18,10 +18,9 @@ def extract_age(text):
     return None
 
 def extract_location(text):
-    keywords = ["san jose","cupertino","santa clara","bay area","palo alto","mountain view"]
-    text_lower = text.lower()
+    keywords = ["san jose", "cupertino", "santa clara", "bay area", "palo alto", "mountain view"]
     for k in keywords:
-        if k in text_lower:
+        if k in text.lower():
             return k.title()
     return None
 
@@ -31,27 +30,28 @@ def extract_price(text):
 
 def extract_schedule(text):
     keywords = ["weekend", "weekday", "after school", "summer"]
-    text_lower = text.lower()
     for k in keywords:
-        if k in text_lower:
+        if k in text.lower():
             return k
     return None
 
 def parse_generic(html, category, base_url):
     soup = BeautifulSoup(html, "html.parser")
     courses = []
-
     for a in soup.select("a"):
         title = a.get_text(strip=True)
         href = a.get("href")
-        if not title or not href: continue
-        if len(title.split()) < 3: continue
-        if any(k in title.lower() for k in BAD_KEYWORDS): continue
-        if href.startswith("#") or "javascript" in href.lower(): continue
-
+        if not title or not href:
+            continue
+        if len(title.split()) < 3:
+            continue
+        if any(k in title.lower() for k in BAD_KEYWORDS):
+            continue
+        if href.startswith("#") or "javascript" in href.lower():
+            continue
         full_link = urljoin(base_url, href)
-        if not full_link.startswith("http"): continue
-
+        if not full_link.startswith("http"):
+            continue
         combined_text = title + " " + a.parent.get_text(" ", strip=True)
         courses.append({
             "title": title,
@@ -63,5 +63,4 @@ def parse_generic(html, category, base_url):
             "schedule": extract_schedule(combined_text) or "N/A",
             "score": 3
         })
-
     return courses[:30]
