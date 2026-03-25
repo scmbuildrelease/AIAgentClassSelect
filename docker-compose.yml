@@ -1,0 +1,22 @@
+version: "3"
+
+services:
+  agent:
+    build: ./agent
+    volumes:
+      - data:/data
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - data:/data
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+
+volumes:
+  data:
