@@ -2,7 +2,7 @@ name: Weekly Scraper
 
 on:
   schedule:
-    - cron: '0 15 * * 1'
+    - cron: '0 15 * * 1'  # Every Monday at 15:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -10,20 +10,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout the repo
       - uses: actions/checkout@v3
 
+      # 2️⃣ Setup Python
       - uses: actions/setup-python@v4
         with:
           python-version: 3.11
 
+      # 3️⃣ Install dependencies
       - run: pip install -r requirements.txt
 
+      # 4️⃣ Run the scraper
       - run: python scrape_courses.py
 
+      # 5️⃣ Commit & push updated courses.json using GITHUB_TOKEN
       - name: Commit results
-        run: |
-          git config --global user.name "bot"
-          git config --global user.email "bot@github.com"
-          git add *.md *.json
-          git commit -m "update courses" || echo "no changes"
-          git push
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "update courses"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          file_pattern: "data/courses_latest.json"
+          branch: "main"        # or your default branch
+          github_token: ${{ secrets.GITHUB_TOKEN }}
