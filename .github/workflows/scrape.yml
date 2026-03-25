@@ -21,12 +21,16 @@ jobs:
         with:
           python-version: 3.11
 
-      # 3️⃣ Install Python dependencies
-      - run: pip install -r requirements.txt
+      # 3️⃣ Install Python dependencies  ✅ (added openai fallback)
+      - run: |
+          pip install -r requirements.txt || true
+          pip install openai
 
-      # 4️⃣ Run the scraper
+      # 4️⃣ Run the scraper  ✅ (inject OpenAI key)
       - name: Run scraper
         run: python scrape_courses.py
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
       # 5️⃣ Commit and push updated JSON
       - name: Commit scraped courses
