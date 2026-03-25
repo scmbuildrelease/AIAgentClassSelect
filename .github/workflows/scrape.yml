@@ -1,35 +1,41 @@
-name: Weekly Scraper
+name: Build and Push Docker Images
 
 on:
-  schedule:
-    - cron: '0 15 * * 1'  # Every Monday at 15:00 UTC
-  workflow_dispatch:       # Allows manual run
+  push:
+    branches:
+      - main
+  workflow_dispatch:   # allows manual run
 
 jobs:
-  run:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout the repo
+      # 1️⃣ Checkout repository
       - uses: actions/checkout@v3
 
-      # 2. Setup Python
-      - uses: actions/setup-python@v4
+      # 2️⃣ Log in to GitHub Container Registry
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
         with:
-          python-version: 3.11
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 3. Install dependencies
-      - run: pip install -r requirements.txt
-
-      # 4. Run scraper
-      - run: python scrape_courses.py
-
-      # 5. Commit & push
-      - name: Commit scraped courses
-        uses: stefanzweifel/git-auto-commit-action@v4
+      # 3️⃣ Build & push backend image
+      - name: Build and push backend Docker image
+        uses: docker/build-push-action@v4
         with:
-          commit_message: "update courses"
-          branch: main
-          file_pattern: "data/courses_latest.json"
-          commit_user_name: "github-actions[bot]"
-          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/aiagentclassselect-backend:latest
+
+      # 4️⃣ Build & push frontend image
+      - name: Build and push frontend Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/aiagentclassselect-frontend:latest
