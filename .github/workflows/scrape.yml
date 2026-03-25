@@ -1,20 +1,49 @@
-name: Build and Push Docker Images
+name: Scrape, Commit JSON & Build Docker
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:   # allows manual run
+  schedule:
+    - cron: '0 15 * * 1'  # Every Monday at 15:00 UTC
+  workflow_dispatch:
 
 jobs:
-  build-and-push:
+  scrape-and-build:
     runs-on: ubuntu-latest
 
     steps:
       # 1️⃣ Checkout repository
       - uses: actions/checkout@v3
 
-      # 2️⃣ Log in to GitHub Container Registry
+      # 2️⃣ Setup Python
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      # 3️⃣ Install Python dependencies
+      - run: pip install -r requirements.txt
+
+      # 4️⃣ Run the scraper
+      - name: Run scraper
+        run: python scrape_courses.py
+
+      # 5️⃣ Commit and push updated JSON
+      - name: Commit scraped courses
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "update courses"
+          branch: main
+          file_pattern: "data/courses_latest.json"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+
+      # 6️⃣ Get short Git SHA for tagging
+      - name: Get Git short SHA
+        id: vars
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      # 7️⃣ Log in to GitHub Container Registry
       - name: Log in to GHCR
         uses: docker/login-action@v2
         with:
@@ -22,20 +51,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 3️⃣ Build & push backend image
+      # 8️⃣ Build & push backend Docker image with SHA tag
       - name: Build and push backend Docker image
         uses: docker/build-push-action@v4
         with:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/aiagentclassselect-backend:latest
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/aiagentclassselect-backend:latest
+            ghcr.io/${{ github.repository_owner }}/aiagentclassselect-backend:main-${{ env.SHORT_SHA }}
 
-      # 4️⃣ Build & push frontend image
+      # 9️⃣ Build & push frontend Docker image with SHA tag
       - name: Build and push frontend Docker image
         uses: docker/build-push-action@v4
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/aiagentclassselect-frontend:latest
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/aiagentclassselect-frontend:latest
+            ghcr.io/${{ github.repository_owner }}/aiagentclassselect-frontend:main-${{ env.SHORT_SHA }}
