@@ -1,14 +1,6 @@
-FROM node:20-alpine
-
+FROM node:20
 WORKDIR /app
-
 COPY package*.json ./
 RUN npm install
-
-COPY . .
-
-# Expose frontend port
-EXPOSE 3000
-
-# Start frontend dev server
+COPY src ./src
 CMD ["npm", "start"]
