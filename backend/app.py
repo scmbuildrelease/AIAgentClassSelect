@@ -1,25 +1,16 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from flask import Flask, jsonify
+import os
 import json
 
-app = FastAPI()
+app = Flask(__name__)
+DATA_FILE = os.path.join("..", "data", "courses_latest.json")
 
-class User(BaseModel):
-    email: str
-    preferences: list[str]
-
-def load_courses():
-    try:
-        with open("/data/courses_latest.json") as f:
-            return json.load(f)
-    except:
-        return []
-
-@app.get("/courses")
+@app.route("/courses")
 def get_courses():
-    return load_courses()
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            return jsonify(json.load(f))
+    return jsonify([])
 
-@app.post("/recommend")
-def recommend(user: User):
-    courses = load_courses()
-    return [c for c in courses if c["category"] in user.preferences][:10]
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000)
