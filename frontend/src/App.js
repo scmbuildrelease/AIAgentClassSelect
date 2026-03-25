@@ -4,7 +4,7 @@ function App() {
   const [courses, setCourses] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:8000/courses")
+    fetch("/courses")
       .then(res => res.json())
       .then(setCourses);
   }, []);
@@ -14,7 +14,7 @@ function App() {
       <h1>🌟 Kids Courses</h1>
       {courses.map((c, i) => (
         <div key={i}>
-          <a href={c.link} target="_blank">{c.title}</a> ({c.category})
+          <a href={c.link}>{c.title}</a> ({c.category})
         </div>
       ))}
     </div>
