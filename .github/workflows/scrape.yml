@@ -3,34 +3,34 @@ name: Weekly Scraper
 on:
   schedule:
     - cron: '0 15 * * 1'  # Every Monday at 15:00 UTC
-  workflow_dispatch:
+  workflow_dispatch:       # Allows manual run from GitHub UI
 
 jobs:
   run:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout the repo
+      # 1. Checkout the repository
       - uses: actions/checkout@v3
 
-      # 2️⃣ Setup Python
+      # 2. Setup Python
       - uses: actions/setup-python@v4
         with:
           python-version: 3.11
 
-      # 3️⃣ Install dependencies
+      # 3. Install Python dependencies
       - run: pip install -r requirements.txt
 
-      # 4️⃣ Run the scraper
+      # 4. Run the scraper
       - run: python scrape_courses.py
 
-      # 5️⃣ Commit & push updated courses.json using GITHUB_TOKEN
-      - name: Commit results
+      # 5. Commit & push results
+      - name: Commit scraped courses
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_message: "update courses"
+          branch: main
+          file_pattern: "data/courses_latest.json"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
-          file_pattern: "data/courses_latest.json"
-          branch: "main"        # or your default branch
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          push: true   # Uses GITHUB_TOKEN automatically to push
