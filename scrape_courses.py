@@ -7,19 +7,12 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 
-# ---------- 配置 ----------
-openai.api_key = os.getenv("OPENAI_API_KEY")  # GitHub Secrets 管理
+# ---------- CONFIG ----------
+openai.api_key = os.getenv("OPENAI_API_KEY")  # Use GitHub Secrets
 output_file = f"courses_{datetime.now().strftime('%Y%m%d')}.md"
 history_file = "courses_history.json"
 
-# 可抓取网站列表
-sites = [
-    {"url": "https://www.robokids.com/classes", "type": "STEM"},
-    {"url": "https://www.artschool.com/classes", "type": "Art"},
-    # 可继续添加更多
-]
-
-# 邮件通知配置（可选）
+# Email notification (optional)
 EMAIL_NOTIFY = False
 SMTP_SERVER = "smtp.example.com"
 SMTP_PORT = 587
@@ -27,32 +20,61 @@ EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_TO = ["your_email@example.com"]
 
-# ---------- Step 1: 数据抓取 ----------
-def scrape_courses():
+WEBLINK_FILE = "weblink.md"  # File with website URLs
+
+# ---------- Step 0: Read weblink.md ----------
+def read_weblinks(file_path=WEBLINK_FILE):
+    sites = []
+    if not os.path.exists(file_path):
+        print(f"⚠️ {file_path} not found!")
+        return sites
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue  # skip empty lines or comments
+            if "," in line:
+                url, category = line.split(",", 1)
+                sites.append({"url": url.strip(), "type": category.strip()})
+            else:
+                sites.append({"url": line.strip(), "type": "Unknown"})
+    return sites
+
+# ---------- Step 1: Scrape courses ----------
+def scrape_courses(sites):
     courses = []
     for site in sites:
-        response = requests.get(site["url"])
-        if response.status_code != 200:
-            continue
-        soup = BeautifulSoup(response.text, "html.parser")
-        for item in soup.select(".course-item"):
-            title = item.select_one(".course-title").text.strip()
-            age = item.select_one(".course-age").text.strip()
-            location = item.select_one(".course-location").text.strip()
-            link = item.select_one("a")["href"]
-            courses.append({
-                "title": title,
-                "age": age,
-                "location": location,
-                "link": link,
-                "category": site["type"]
-            })
+        url = site["url"]
+        category = site["type"]
+        try:
+            response = requests.get(url, timeout=10)
+            if response.status_code != 200:
+                print(f"⚠️ Failed to fetch {url}, status {response.status_code}")
+                continue
+            soup = BeautifulSoup(response.text, "html.parser")
+            # NOTE: Adjust selectors to match your target website
+            for item in soup.select(".course-item"):
+                title_el = item.select_one(".course-title")
+                age_el = item.select_one(".course-age")
+                loc_el = item.select_one(".course-location")
+                link_el = item.select_one("a")
+                if not title_el or not age_el or not loc_el or not link_el:
+                    continue
+                courses.append({
+                    "title": title_el.text.strip(),
+                    "age": age_el.text.strip(),
+                    "location": loc_el.text.strip(),
+                    "link": link_el.get("href").strip(),
+                    "category": category
+                })
+        except Exception as e:
+            print(f"⚠️ Error fetching {url}: {e}")
     return courses
 
-# ---------- Step 2: 历史对比 ----------
+# ---------- Step 2: Compare with history ----------
 def compare_history(new_courses):
-    added = []
-    updated = []
+    added, updated = [], []
     if os.path.exists(history_file):
         with open(history_file, "r", encoding="utf-8") as f:
             history = json.load(f)
@@ -67,19 +89,23 @@ def compare_history(new_courses):
             old = history_titles[course["title"]]
             if course != old:
                 updated.append(course)
-    # 保存最新历史
+
+    # Save latest history
     with open(history_file, "w", encoding="utf-8") as f:
         json.dump(new_courses, f, ensure_ascii=False, indent=2)
     return added, updated
 
-# ---------- Step 3: AI 摘要生成 ----------
+# ---------- Step 3: AI summarize ----------
 def summarize_courses(courses):
-    course_text = json.dumps(courses, ensure_ascii=False)
+    if not courses:
+        return "⚠️ No courses found to summarize."
+
     prompt = (
         f"请将以下儿童课程信息整理成 Markdown 表格，"
         f"包含课程名、适合年龄、地点、网址、分类，并用 1-5 星评分推荐，"
-        f"标注新增课程和更新课程:\n{course_text}"
+        f"标注新增课程和更新课程:\n{json.dumps(courses, ensure_ascii=False)}"
     )
+
     response = openai.ChatCompletion.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
@@ -87,13 +113,13 @@ def summarize_courses(courses):
     )
     return response['choices'][0]['message']['content']
 
-# ---------- Step 4: 输出文件 ----------
+# ---------- Step 4: Save Markdown ----------
 def save_markdown(content):
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(content)
-    print(f"✅ 已保存 {output_file}")
+    print(f"✅ Saved {output_file}")
 
-# ---------- Step 5: 可选通知 ----------
+# ---------- Step 5: Optional email ----------
 def send_email(content):
     if not EMAIL_NOTIFY:
         return
@@ -107,19 +133,23 @@ def send_email(content):
     server.login(EMAIL_USER, EMAIL_PASS)
     server.sendmail(EMAIL_USER, EMAIL_TO, msg.as_string())
     server.quit()
-    print("📧 已发送邮件通知")
+    print("📧 Email notification sent.")
 
-# ---------- 主流程 ----------
+# ---------- Main ----------
 if __name__ == "__main__":
-    print("🔍 开始抓取课程信息...")
-    raw_courses = scrape_courses()
-    if not raw_courses:
-        print("⚠️ 没有抓到课程信息！")
-    else:
-        added, updated = compare_history(raw_courses)
-        print(f"✅ 抓到 {len(raw_courses)} 条课程信息")
-        print(f"🆕 新增: {len(added)}, 🔄 更新: {len(updated)}")
-        md_content = summarize_courses(raw_courses)
-        save_markdown(md_content)
-        send_email(md_content)
-        print("🎉 完成！")
+    sites = read_weblinks()
+    if not sites:
+        print("⚠️ No websites to scrape. Exiting.")
+        exit(1)
+
+    print(f"🔍 Loaded {len(sites)} sites from {WEBLINK_FILE}")
+    courses = scrape_courses(sites)
+    print(f"✅ Found {len(courses)} courses")
+
+    added, updated = compare_history(courses)
+    print(f"🆕 Added: {len(added)}, 🔄 Updated: {len(updated)}")
+
+    md_content = summarize_courses(courses)
+    save_markdown(md_content)
+    send_email(md_content)
+    print("🎉 Done!")
