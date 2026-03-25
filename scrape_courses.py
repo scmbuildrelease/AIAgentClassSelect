@@ -76,13 +76,24 @@ def deduplicate(courses):
 
     return unique
 
+# ---------- PRE-FILTER (LOCATION) ----------
+def pre_filter(courses):
+    result = []
+
+    for c in courses:
+        text = (c.get("title", "") + c.get("location", "")).lower()
+
+        if any(k in text for k in ["san jose", "bay area", "cupertino", "santa clara"]):
+            result.append(c)
+
+    return result or courses  # fallback if empty
+
 # ---------- AI FILTER ----------
 def ai_filter_and_rank(courses):
     if not courses:
         return []
 
-    # reduce cost
-    sample = courses[:30]
+    sample = courses[:30]  # cost control
 
     prompt = f"""
 You are a smart assistant helping parents find kids classes.
@@ -90,16 +101,21 @@ You are a smart assistant helping parents find kids classes.
 TASK:
 1. Keep only REAL kids courses (remove navigation, login, ads)
 2. Prefer age 6-8
-3. Prefer Bay Area / San Jose if possible
+3. Prefer San Jose / Bay Area
 4. Rank best courses first
 
-Return STRICT JSON format:
+IMPORTANT:
+Use the structured fields (age, location, schedule, price) when ranking.
+
+Return STRICT JSON:
 
 [
   {{
     "title": "...",
     "link": "...",
     "category": "...",
+    "age": "...",
+    "location": "...",
     "score": 1-5,
     "reason": "short reason"
   }}
@@ -146,6 +162,9 @@ def run():
     # ---------- deduplicate ----------
     all_courses = deduplicate(all_courses)
 
+    # ---------- pre-filter ----------
+    all_courses = pre_filter(all_courses)
+
     # ---------- AI filter ----------
     use_ai = os.getenv("USE_AI", "true").lower() == "true"
 
@@ -160,6 +179,7 @@ def run():
         json.dump(all_courses, f, indent=2)
 
     print(f"✅ Saved {len(all_courses)} courses")
+
 
 # ---------- ENTRY ----------
 if __name__ == "__main__":
