@@ -1,155 +1,81 @@
 import requests
-from bs4 import BeautifulSoup
 import json
-import openai
-from datetime import datetime
 import os
-import smtplib
-from email.mime.text import MIMEText
+from datetime import datetime
+from parsers.generic_parser import parse_generic
 
 # ---------- CONFIG ----------
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Use GitHub Secrets
-output_file = f"courses_{datetime.now().strftime('%Y%m%d')}.md"
-history_file = "courses_history.json"
+WEBLINK_FILE = "weblink.md"
+HISTORY_FILE = "courses_history.json"
+OUTPUT_FILE = f"courses_{datetime.now().strftime('%Y%m%d')}.md"
 
-# Email notification (optional)
-EMAIL_NOTIFY = False
-SMTP_SERVER = "smtp.example.com"
-SMTP_PORT = 587
-EMAIL_USER = os.getenv("EMAIL_USER")
-EMAIL_PASS = os.getenv("EMAIL_PASS")
-EMAIL_TO = ["your_email@example.com"]
-
-WEBLINK_FILE = "weblink.md"  # File with website URLs
-
-# ---------- Step 0: Read weblink.md ----------
+# ---------- Read weblink.md ----------
 def read_weblinks(file_path=WEBLINK_FILE):
     sites = []
-    if not os.path.exists(file_path):
-        print(f"⚠️ {file_path} not found!")
-        return sites
-
     with open(file_path, "r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith("#"):
-                continue  # skip empty lines or comments
-            if "," in line:
-                url, category = line.split(",", 1)
-                sites.append({"url": url.strip(), "type": category.strip()})
-            else:
-                sites.append({"url": line.strip(), "type": "Unknown"})
+                continue
+            url, category = line.split(",", 1)
+            sites.append({"url": url.strip(), "category": category.strip()})
     return sites
 
-# ---------- Step 1: Scrape courses ----------
-def scrape_courses(sites):
-    courses = []
+# ---------- Scrape ----------
+def scrape_sites(sites):
+    all_courses = []
+
     for site in sites:
-        url = site["url"]
-        category = site["type"]
         try:
-            response = requests.get(url, timeout=10)
-            if response.status_code != 200:
-                print(f"⚠️ Failed to fetch {url}, status {response.status_code}")
+            print(f"🔍 Scraping {site['url']}")
+            res = requests.get(site["url"], timeout=10)
+
+            if res.status_code != 200:
+                print(f"⚠️ Failed: {site['url']}")
                 continue
-            soup = BeautifulSoup(response.text, "html.parser")
-            # NOTE: Adjust selectors to match your target website
-            for item in soup.select(".course-item"):
-                title_el = item.select_one(".course-title")
-                age_el = item.select_one(".course-age")
-                loc_el = item.select_one(".course-location")
-                link_el = item.select_one("a")
-                if not title_el or not age_el or not loc_el or not link_el:
-                    continue
-                courses.append({
-                    "title": title_el.text.strip(),
-                    "age": age_el.text.strip(),
-                    "location": loc_el.text.strip(),
-                    "link": link_el.get("href").strip(),
-                    "category": category
-                })
+
+            courses = parse_generic(res.text, site["category"])
+            all_courses.extend(courses)
+
         except Exception as e:
-            print(f"⚠️ Error fetching {url}: {e}")
-    return courses
+            print(f"❌ Error: {e}")
 
-# ---------- Step 2: Compare with history ----------
-def compare_history(new_courses):
-    added, updated = [], []
-    if os.path.exists(history_file):
-        with open(history_file, "r", encoding="utf-8") as f:
-            history = json.load(f)
+    return all_courses
+
+# ---------- History ----------
+def compare_history(new_data):
+    if os.path.exists(HISTORY_FILE):
+        old = json.load(open(HISTORY_FILE))
     else:
-        history = []
+        old = []
 
-    history_titles = {c["title"]: c for c in history}
-    for course in new_courses:
-        if course["title"] not in history_titles:
-            added.append(course)
-        else:
-            old = history_titles[course["title"]]
-            if course != old:
-                updated.append(course)
+    old_titles = {c["title"] for c in old}
 
-    # Save latest history
-    with open(history_file, "w", encoding="utf-8") as f:
-        json.dump(new_courses, f, ensure_ascii=False, indent=2)
-    return added, updated
+    added = [c for c in new_data if c["title"] not in old_titles]
 
-# ---------- Step 3: AI summarize ----------
-def summarize_courses(courses):
-    if not courses:
-        return "⚠️ No courses found to summarize."
+    json.dump(new_data, open(HISTORY_FILE, "w"), indent=2)
 
-    prompt = (
-        f"请将以下儿童课程信息整理成 Markdown 表格，"
-        f"包含课程名、适合年龄、地点、网址、分类，并用 1-5 星评分推荐，"
-        f"标注新增课程和更新课程:\n{json.dumps(courses, ensure_ascii=False)}"
-    )
+    return added
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7,
-    )
-    return response['choices'][0]['message']['content']
+# ---------- Markdown ----------
+def generate_md(courses, added):
+    lines = ["# Weekly Kids Courses\n"]
 
-# ---------- Step 4: Save Markdown ----------
-def save_markdown(content):
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(content)
-    print(f"✅ Saved {output_file}")
+    for c in courses:
+        tag = "🆕" if c in added else ""
+        lines.append(f"- {tag} [{c['title']}]({c['link']}) ({c['category']})")
 
-# ---------- Step 5: Optional email ----------
-def send_email(content):
-    if not EMAIL_NOTIFY:
-        return
-    msg = MIMEText(content, "plain", "utf-8")
-    msg["Subject"] = f"每周儿童课程更新 {datetime.now().strftime('%Y-%m-%d')}"
-    msg["From"] = EMAIL_USER
-    msg["To"] = ", ".join(EMAIL_TO)
+    return "\n".join(lines)
 
-    server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-    server.starttls()
-    server.login(EMAIL_USER, EMAIL_PASS)
-    server.sendmail(EMAIL_USER, EMAIL_TO, msg.as_string())
-    server.quit()
-    print("📧 Email notification sent.")
-
-# ---------- Main ----------
+# ---------- MAIN ----------
 if __name__ == "__main__":
     sites = read_weblinks()
-    if not sites:
-        print("⚠️ No websites to scrape. Exiting.")
-        exit(1)
+    courses = scrape_sites(sites)
+    added = compare_history(courses)
 
-    print(f"🔍 Loaded {len(sites)} sites from {WEBLINK_FILE}")
-    courses = scrape_courses(sites)
-    print(f"✅ Found {len(courses)} courses")
+    md = generate_md(courses, added)
 
-    added, updated = compare_history(courses)
-    print(f"🆕 Added: {len(added)}, 🔄 Updated: {len(updated)}")
+    with open(OUTPUT_FILE, "w") as f:
+        f.write(md)
 
-    md_content = summarize_courses(courses)
-    save_markdown(md_content)
-    send_email(md_content)
-    print("🎉 Done!")
+    print(f"✅ Generated {OUTPUT_FILE}")
