@@ -1,5 +1,35 @@
 [
   {
+    "title": "Mountain View, CA",
+    "link": "https://siliconvalley.clubscikidz.com/stem-summer-camps-mountain-view/",
+    "category": "Art",
+    "age": "N/A",
+    "location": "Mountain View",
+    "price": "N/A",
+    "schedule": "N/A",
+    "score": 3
+  },
+  {
+    "title": "San Jose, CA",
+    "link": "https://siliconvalley.clubscikidz.com/stem-summer-camps-san-jose/",
+    "category": "Art",
+    "age": "N/A",
+    "location": "San Jose",
+    "price": "N/A",
+    "schedule": "N/A",
+    "score": 3
+  },
+  {
+    "title": "Santa Clara, CA",
+    "link": "https://siliconvalley.clubscikidz.com/stem-summer-camps-santa-clara/",
+    "category": "Art",
+    "age": "N/A",
+    "location": "Santa Clara",
+    "price": "N/A",
+    "schedule": "N/A",
+    "score": 3
+  },
+  {
     "title": "6/22 2026 At San Jose Christian School",
     "link": "https://campscui.active.com/orgs/clubscikidzsiliconvalley/?season=3721336&session=69861431",
     "category": "Art",
@@ -12,6 +42,16 @@
   {
     "title": "7/6 2026 At Mountain View Academy",
     "link": "https://campscui.active.com/orgs/clubscikidzsiliconvalley/?season=3721336&session=68486632",
+    "category": "Art",
+    "age": "N/A",
+    "location": "San Jose",
+    "price": "N/A",
+    "schedule": "summer",
+    "score": 3
+  },
+  {
+    "title": "7/6 2026 At Rossinca Academy",
+    "link": "https://campscui.active.com/orgs/clubscikidzsiliconvalley/?season=3721336&session=70761936",
     "category": "Art",
     "age": "N/A",
     "location": "San Jose",
