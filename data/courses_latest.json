@@ -1,5 +1,65 @@
 [
   {
+    "title": "St. Justin Catholic School, Santa Clara",
+    "link": "https://siliconvalley.clubscikidz.com/locations/st-justin-catholic-school/",
+    "category": "Art",
+    "age": "N/A",
+    "location": "Santa Clara",
+    "price": "N/A",
+    "schedule": "N/A",
+    "score": 3
+  },
+  {
+    "title": "Mountain View Academy, Mountain View",
+    "link": "https://siliconvalley.clubscikidz.com/locations/mountain-view-academy/",
+    "category": "Art",
+    "age": "N/A",
+    "location": "Mountain View",
+    "price": "N/A",
+    "schedule": "N/A",
+    "score": 3
+  },
+  {
+    "title": "San Jose Christian School, Campbell",
+    "link": "https://siliconvalley.clubscikidz.com/locations/san-jose-christian-school/",
+    "category": "Art",
+    "age": "N/A",
+    "location": "San Jose",
+    "price": "N/A",
+    "schedule": "N/A",
+    "score": 3
+  },
+  {
+    "title": "Stratford Preparatory – Blackford Campus, San Jose",
+    "link": "https://siliconvalley.clubscikidz.com/locations/stratford-preparatory-blackford-campus/",
+    "category": "Art",
+    "age": "N/A",
+    "location": "San Jose",
+    "price": "N/A",
+    "schedule": "N/A",
+    "score": 3
+  },
+  {
+    "title": "Rossinca Academy, Cupertino",
+    "link": "https://siliconvalley.clubscikidz.com/locations/rossinca-academy/",
+    "category": "Art",
+    "age": "N/A",
+    "location": "Cupertino",
+    "price": "N/A",
+    "schedule": "N/A",
+    "score": 3
+  },
+  {
+    "title": "Santa Clara, CA",
+    "link": "https://siliconvalley.clubscikidz.com/stem-summer-camps-santa-clara/",
+    "category": "Art",
+    "age": "N/A",
+    "location": "Santa Clara",
+    "price": "N/A",
+    "schedule": "N/A",
+    "score": 3
+  },
+  {
     "title": "Mountain View, CA",
     "link": "https://siliconvalley.clubscikidz.com/stem-summer-camps-mountain-view/",
     "category": "Art",
@@ -20,58 +80,8 @@
     "score": 3
   },
   {
-    "title": "Santa Clara, CA",
-    "link": "https://siliconvalley.clubscikidz.com/stem-summer-camps-santa-clara/",
-    "category": "Art",
-    "age": "N/A",
-    "location": "Santa Clara",
-    "price": "N/A",
-    "schedule": "N/A",
-    "score": 3
-  },
-  {
     "title": "6/22 2026 At San Jose Christian School",
     "link": "https://campscui.active.com/orgs/clubscikidzsiliconvalley/?season=3721336&session=69861431",
-    "category": "Art",
-    "age": "N/A",
-    "location": "San Jose",
-    "price": "N/A",
-    "schedule": "summer",
-    "score": 3
-  },
-  {
-    "title": "7/6 2026 At Mountain View Academy",
-    "link": "https://campscui.active.com/orgs/clubscikidzsiliconvalley/?season=3721336&session=68486632",
-    "category": "Art",
-    "age": "N/A",
-    "location": "San Jose",
-    "price": "N/A",
-    "schedule": "summer",
-    "score": 3
-  },
-  {
-    "title": "7/6 2026 At Rossinca Academy",
-    "link": "https://campscui.active.com/orgs/clubscikidzsiliconvalley/?season=3721336&session=70761936",
-    "category": "Art",
-    "age": "N/A",
-    "location": "San Jose",
-    "price": "N/A",
-    "schedule": "summer",
-    "score": 3
-  },
-  {
-    "title": "7/13 2026 At St. Justin Catholic School",
-    "link": "https://campscui.active.com/orgs/clubscikidzsiliconvalley/?season=3721336&session=68490232",
-    "category": "Art",
-    "age": "N/A",
-    "location": "San Jose",
-    "price": "N/A",
-    "schedule": "summer",
-    "score": 3
-  },
-  {
-    "title": "7/20 2026 At Westhope Presbyterian Church",
-    "link": "https://campscui.active.com/orgs/clubscikidzsiliconvalley/?season=3721336&session=70162332",
     "category": "Art",
     "age": "N/A",
     "location": "San Jose",
