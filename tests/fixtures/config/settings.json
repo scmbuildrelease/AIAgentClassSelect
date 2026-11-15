@@ -1,0 +1,15 @@
+{
+  "default_age_min": 7,
+  "default_age_max": 8,
+  "cities": ["San Jose", "Sunnyvale", "Cupertino", "Mountain View"],
+  "categories": {
+    "stem": {"label": "Math, Science, STEM & Coding", "short": "STEM", "keywords": ["science", "robot", "coding"]},
+    "arts": {"label": "Arts & Crafts", "short": "Arts", "keywords": ["art", "painting"]},
+    "music": {"label": "Music", "short": "Music", "keywords": ["music", "piano"]},
+    "dance_performing": {"label": "Dance & Performing Arts", "short": "Dance/Theater", "keywords": ["dance", "ballet"]},
+    "camps": {"label": "Camps", "short": "Camps", "keywords": ["camp", "summer"]}
+  },
+  "request": {"user_agent": "AIAgentClassSelect-test/1.0", "timeout_seconds": 5, "retries": 1, "delay_seconds": 0},
+  "discovery": {"max_candidates_per_page": 10, "program_words": ["camp", "class", "lesson", "program"]},
+  "report": {"max_rows_per_table": 50}
+}

@@ -1,0 +1,7 @@
+{
+  "https://camps.example.org/ages-7-9/": {"file": "camps.html"},
+  "https://art.example.org/kids-painting": {"file": "art.html"},
+  "https://dance.example.org/classes": {"file": "dance.html"},
+  "https://music.example.org/piano": {"file": "music.html"},
+  "https://camps.example.org/": {"file": "home.html"}
+}

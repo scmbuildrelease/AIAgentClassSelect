@@ -1,0 +1,22 @@
+{
+  "sources": [
+    {"id": "fx-camps", "provider": "Example Science Camps", "url": "https://camps.example.org/ages-7-9/",
+     "categories": ["stem", "camps"], "city": "Multiple locations", "parser": "listing", "program_type": "camp",
+     "season": "summer",
+     "listing": {"item": "article.camp", "title": "@aria-label", "link": "header a@href",
+                 "fields": {"age_text": ".camp-age", "price": ".camp-price", "sessions": ".sessions a",
+                            "enrollment_status": ".enroll"}}},
+    {"id": "fx-art", "provider": "Example Art Studio", "url": "https://art.example.org/kids-painting",
+     "categories": ["arts"], "city": "Sunnyvale", "program_type": "weekly_class"},
+    {"id": "fx-dance", "provider": "Example Dance Academy", "url": "https://dance.example.org/classes",
+     "categories": ["dance_performing"], "city": "San Jose", "program_type": "weekly_class"},
+    {"id": "fx-music", "provider": "Example Music School", "url": "https://music.example.org/piano",
+     "categories": ["music"], "city": "Cupertino", "program_type": "weekly_class"},
+    {"id": "fx-city-rec", "provider": "Example City Recreation", "url": "https://city.example.gov/recreation",
+     "categories": ["camps", "arts"], "city": "Mountain View", "manual_only": true,
+     "notes": "Blocks automated requests."}
+  ],
+  "discovery_seeds": [
+    {"provider": "Example Science Camps", "url": "https://camps.example.org/", "categories": ["stem", "camps"]}
+  ]
+}

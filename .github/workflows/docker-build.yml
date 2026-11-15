@@ -1,0 +1,39 @@
+name: Build Docker images
+
+# Builds the optional backend/frontend viewer images when their code changes.
+on:
+  push:
+    branches: [main]
+    paths: ["backend/**", "frontend/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get short SHA
+        run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/aiagentclassselect-backend:latest
+            ghcr.io/${{ github.repository_owner }}/aiagentclassselect-backend:main-${{ env.SHORT_SHA }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/aiagentclassselect-frontend:latest
+            ghcr.io/${{ github.repository_owner }}/aiagentclassselect-frontend:main-${{ env.SHORT_SHA }}

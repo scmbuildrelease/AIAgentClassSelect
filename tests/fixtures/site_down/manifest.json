@@ -1,0 +1,6 @@
+{
+  "https://camps.example.org/ages-7-9/": {"status": 503},
+  "https://art.example.org/kids-painting": {"status": 503},
+  "https://dance.example.org/classes": {"status": 503},
+  "https://music.example.org/piano": {"status": 503}
+}

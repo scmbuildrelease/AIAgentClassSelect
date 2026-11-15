@@ -1,0 +1,258 @@
+{
+  "_help": "Add a source by appending an object to 'sources'. Required: id (lowercase-dashes, never change it once used), provider, url, categories (keys from settings.json), city. Optional: parser ('page' = one program record per page [default], 'listing' = one record per item using CSS selectors), program_type (weekly_class | camp | seasonal_program | event | program_info), season, course_name, enabled, manual_only (list in report for manual checking, never fetched), notes. URLs below were verified reachable on 2026-11-15.",
+  "sources": [
+    {
+      "id": "clubscikidz-ages-7-9",
+      "provider": "Club SciKidz Silicon Valley",
+      "url": "https://siliconvalley.clubscikidz.com/age-groups/ages-7-9/",
+      "categories": ["stem", "camps"],
+      "city": "Multiple Silicon Valley locations",
+      "parser": "listing",
+      "program_type": "camp",
+      "season": "summer",
+      "listing": {
+        "item": "article.summer_camps",
+        "title": "@aria-label",
+        "link": "header a@href",
+        "fields": {
+          "age_text": ".camp-age-group",
+          "price": ".camp-price",
+          "sessions": ".sessions-group a",
+          "enrollment_status": ".type-group-wrapper > span, .no-sessions"
+        }
+      }
+    },
+    {
+      "id": "coderschool-digiart",
+      "provider": "theCoderSchool",
+      "url": "https://www.thecoderschool.com/camps/digiart/",
+      "categories": ["stem", "arts", "camps"],
+      "city": "Multiple locations (check page for Bay Area sites)",
+      "program_type": "camp",
+      "notes": "National franchise camp page carried over from the original weblink.md."
+    },
+    {
+      "id": "techknowhow-winter-camps",
+      "provider": "TechKnowHow",
+      "url": "https://www.techknowhowkids.com/winter-camps",
+      "categories": ["stem", "camps"],
+      "city": "Multiple Bay Area locations",
+      "program_type": "camp",
+      "season": "winter",
+      "course_name": "Winter Camps (LEGO, Minecraft & Coding)"
+    },
+    {
+      "id": "techknowhow-lego-robotics",
+      "provider": "TechKnowHow",
+      "url": "https://www.techknowhowkids.com/lego-robotics",
+      "categories": ["stem", "camps"],
+      "city": "Multiple Bay Area locations",
+      "program_type": "camp",
+      "season": "summer"
+    },
+    {
+      "id": "sjys-camps",
+      "provider": "San Jose Youth Symphony",
+      "url": "https://sjys.org/camp/",
+      "categories": ["music", "camps"],
+      "city": "San Jose",
+      "program_type": "camp",
+      "season": "summer"
+    },
+    {
+      "id": "cmt-classes",
+      "provider": "Children's Musical Theater San Jose",
+      "url": "https://www.cmtsj.org/classes/",
+      "categories": ["dance_performing", "music"],
+      "city": "San Jose",
+      "program_type": "weekly_class"
+    },
+    {
+      "id": "cmt-winter-camp",
+      "provider": "Children's Musical Theater San Jose",
+      "url": "https://www.cmtsj.org/camp/",
+      "categories": ["dance_performing", "camps"],
+      "city": "San Jose",
+      "program_type": "camp",
+      "season": "winter"
+    },
+    {
+      "id": "pyt-classes-camps",
+      "provider": "Peninsula Youth Theatre",
+      "url": "https://www.pytnet.org/programs",
+      "categories": ["dance_performing", "camps"],
+      "city": "Mountain View",
+      "program_type": "program_info"
+    },
+    {
+      "id": "western-ballet-children",
+      "provider": "Western Ballet",
+      "url": "https://westernballet.org/summersaturdayclasses/",
+      "categories": ["dance_performing"],
+      "city": "Mountain View",
+      "program_type": "seasonal_program",
+      "season": "summer"
+    },
+    {
+      "id": "western-ballet-camp",
+      "provider": "Western Ballet",
+      "url": "https://westernballet.org/summercamp/",
+      "categories": ["dance_performing", "camps"],
+      "city": "Mountain View",
+      "program_type": "camp",
+      "season": "summer"
+    },
+    {
+      "id": "abhinaya-dance-school",
+      "provider": "Abhinaya Dance Company of San José",
+      "url": "https://abhinaya.org/dance-school/",
+      "categories": ["dance_performing"],
+      "city": "San Jose",
+      "program_type": "weekly_class",
+      "course_name": "Abhinaya Dance School (Bharatanatyam classes)"
+    },
+    {
+      "id": "ymca-summer-day-camps",
+      "provider": "YMCA of Silicon Valley",
+      "url": "https://www.ymcasv.org/child-care-camps/summer-day-camps",
+      "categories": ["camps", "sports", "outdoor"],
+      "city": "Multiple Silicon Valley locations",
+      "program_type": "camp",
+      "season": "summer"
+    },
+    {
+      "id": "ymca-school-break-camps",
+      "provider": "YMCA of Silicon Valley",
+      "url": "https://www.ymcasv.org/child-care-camps/holiday-camps",
+      "categories": ["camps"],
+      "city": "Multiple Silicon Valley locations",
+      "program_type": "camp",
+      "season": "school break"
+    },
+    {
+      "id": "ymca-youth-sports",
+      "provider": "YMCA of Silicon Valley",
+      "url": "https://www.ymcasv.org/family-programs-sports/youth-sports",
+      "categories": ["sports"],
+      "city": "Multiple Silicon Valley locations",
+      "program_type": "weekly_class"
+    },
+    {
+      "id": "ymca-swim-lessons",
+      "provider": "YMCA of Silicon Valley",
+      "url": "https://www.ymcasv.org/swimming/swim-lessons",
+      "categories": ["sports"],
+      "city": "Multiple Silicon Valley locations",
+      "program_type": "weekly_class"
+    },
+    {
+      "id": "hidden-villa-summer-camp",
+      "provider": "Hidden Villa",
+      "url": "https://www.hiddenvilla.org/programs/summer-camps/",
+      "categories": ["outdoor", "camps"],
+      "city": "Los Altos Hills",
+      "program_type": "camp",
+      "season": "summer"
+    },
+    {
+      "id": "openspace-kids",
+      "provider": "Midpeninsula Regional Open Space District",
+      "url": "https://www.openspace.org/where-to-go/kids-education",
+      "categories": ["outdoor"],
+      "city": "Midpeninsula preserves",
+      "program_type": "program_info"
+    },
+    {
+      "id": "milpitas-recreation",
+      "provider": "City of Milpitas Recreation & Community Services",
+      "url": "https://www.milpitas.gov/180/Recreation-Community-Services",
+      "categories": ["sports", "arts", "camps", "social"],
+      "city": "Milpitas",
+      "program_type": "program_info",
+      "course_name": "Recreation & Community Services programs"
+    },
+    {
+      "id": "pacific-art-league-classes",
+      "provider": "Pacific Art League",
+      "url": "https://www.pacificartleague.org/classes",
+      "categories": ["arts"],
+      "city": "Palo Alto",
+      "manual_only": true,
+      "notes": "Class list is loaded by JavaScript from a registration system; not visible to a static fetch."
+    },
+    {
+      "id": "sjpl-kids-events",
+      "provider": "San Jose Public Library (kids ages 5-10 events)",
+      "url": "https://sjpl.bibliocommons.com/events/search/fq=audiences:(5d5f0926be771f2300369397)",
+      "categories": ["writing_reading", "social"],
+      "city": "San Jose",
+      "manual_only": true,
+      "notes": "Event calendar is rendered by JavaScript."
+    },
+    {
+      "id": "sccld-kids",
+      "provider": "Santa Clara County Library District (Cupertino, Milpitas, Campbell...)",
+      "url": "https://sccld.org/kids/",
+      "categories": ["writing_reading", "social"],
+      "city": "Multiple Santa Clara County locations",
+      "manual_only": true,
+      "notes": "Events live in a JavaScript calendar (sccl.bibliocommons.com)."
+    },
+    {
+      "id": "san-jose-prns",
+      "provider": "City of San Jose Parks, Recreation & Neighborhood Services",
+      "url": "https://www.sanjoseca.gov/",
+      "categories": ["sports", "arts", "camps", "outdoor", "social"],
+      "city": "San Jose",
+      "manual_only": true,
+      "notes": "City site returns HTTP 403 to automated requests (checked 2026-11-15). Open Parks & Recreation from the city site."
+    },
+    {
+      "id": "sunnyvale-recreation",
+      "provider": "City of Sunnyvale Recreation",
+      "url": "https://www.sunnyvale.ca.gov/",
+      "categories": ["sports", "arts", "camps", "social"],
+      "city": "Sunnyvale",
+      "manual_only": true,
+      "notes": "City site returns HTTP 403 to automated requests (checked 2026-11-15)."
+    },
+    {
+      "id": "cupertino-recreation",
+      "provider": "City of Cupertino Parks & Recreation",
+      "url": "https://www.cupertino.gov/",
+      "categories": ["sports", "arts", "camps", "social"],
+      "city": "Cupertino",
+      "manual_only": true,
+      "notes": "City site returns HTTP 403 to automated requests (checked 2026-11-15)."
+    },
+    {
+      "id": "mountain-view-recreation",
+      "provider": "City of Mountain View Recreation",
+      "url": "https://www.mountainview.gov/",
+      "categories": ["sports", "arts", "camps", "social"],
+      "city": "Mountain View",
+      "manual_only": true,
+      "notes": "City site returns HTTP 403 to automated requests (checked 2026-11-15)."
+    },
+    {
+      "id": "santa-clara-recreation",
+      "provider": "City of Santa Clara Parks & Recreation",
+      "url": "https://www.santaclaraca.gov/",
+      "categories": ["sports", "arts", "camps", "social"],
+      "city": "Santa Clara",
+      "manual_only": true,
+      "notes": "City site returns HTTP 403 to automated requests (checked 2026-11-15)."
+    }
+  ],
+  "discovery_seeds": [
+    {"provider": "Club SciKidz Silicon Valley", "url": "https://siliconvalley.clubscikidz.com/", "categories": ["stem", "camps"]},
+    {"provider": "TechKnowHow", "url": "https://www.techknowhowkids.com/", "categories": ["stem", "camps"]},
+    {"provider": "YMCA of Silicon Valley", "url": "https://www.ymcasv.org/", "categories": ["sports", "camps", "outdoor"]},
+    {"provider": "Children's Musical Theater San Jose", "url": "https://www.cmtsj.org/", "categories": ["dance_performing", "music", "camps"]},
+    {"provider": "Western Ballet", "url": "https://westernballet.org/", "categories": ["dance_performing"]},
+    {"provider": "San Jose Youth Symphony", "url": "https://sjys.org/", "categories": ["music"]},
+    {"provider": "Hidden Villa", "url": "https://www.hiddenvilla.org/", "categories": ["outdoor", "camps"]},
+    {"provider": "Midpeninsula Regional Open Space District", "url": "https://www.openspace.org/", "categories": ["outdoor"]},
+    {"provider": "City of Milpitas", "url": "https://www.milpitas.gov/", "categories": ["sports", "arts", "camps", "social"]}
+  ]
+}

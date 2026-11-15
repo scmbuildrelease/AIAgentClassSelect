@@ -1,0 +1,70 @@
+{
+  "region": "South Bay / San Francisco Bay Area",
+  "default_age_min": 7,
+  "default_age_max": 8,
+  "cities": [
+    "San Jose", "Santa Clara", "Milpitas", "Sunnyvale", "Cupertino", "Mountain View",
+    "Campbell", "Saratoga", "Los Gatos", "Los Altos", "Palo Alto", "Morgan Hill",
+    "Fremont", "San Mateo", "Belmont", "Burlingame", "Foster City", "Oakland", "San Francisco"
+  ],
+  "categories": {
+    "stem": {
+      "label": "Math, Science, STEM & Coding",
+      "short": "STEM",
+      "keywords": ["math", "science", "stem", "steam", "coding", "code", "robot", "engineer", "lego", "minecraft", "chess", "tech"]
+    },
+    "writing_reading": {
+      "label": "Writing & Reading",
+      "short": "Reading/Writing",
+      "keywords": ["writing", "reading", "book", "story", "library", "literacy"]
+    },
+    "arts": {
+      "label": "Drawing, Painting, Arts & Crafts",
+      "short": "Arts",
+      "keywords": ["art", "drawing", "painting", "craft", "ceramic", "clay", "animation"]
+    },
+    "music": {
+      "label": "Piano, Instruments & Singing",
+      "short": "Music",
+      "keywords": ["music", "piano", "violin", "guitar", "orchestra", "symphony", "choir", "sing", "vocal", "instrument"]
+    },
+    "dance_performing": {
+      "label": "Dance & Performing Arts",
+      "short": "Dance/Theater",
+      "keywords": ["dance", "ballet", "theater", "theatre", "acting", "drama", "musical", "improv", "hip hop"]
+    },
+    "sports": {
+      "label": "Sports & Physical Activities",
+      "short": "Sports",
+      "keywords": ["sport", "swim", "soccer", "basketball", "tennis", "gymnastic", "martial", "karate", "skating", "climb"]
+    },
+    "social": {
+      "label": "Playdates & Social Activities",
+      "short": "Social",
+      "keywords": ["playdate", "social", "storytime", "family", "club", "meetup"]
+    },
+    "outdoor": {
+      "label": "Hiking, Outdoors & Nature",
+      "short": "Outdoors",
+      "keywords": ["hike", "hiking", "outdoor", "nature", "farm", "garden", "open space", "ranger", "wilderness"]
+    },
+    "camps": {
+      "label": "Summer, Winter & Break Camps",
+      "short": "Camps",
+      "keywords": ["camp", "summer", "winter break", "spring break", "school break", "holiday"]
+    }
+  },
+  "request": {
+    "user_agent": "AIAgentClassSelect/1.0 (+https://github.com/scmbuildrelease/AIAgentClassSelect; personal kids activity tracker)",
+    "timeout_seconds": 20,
+    "retries": 2,
+    "delay_seconds": 2.0
+  },
+  "discovery": {
+    "max_candidates_per_page": 15,
+    "program_words": ["camp", "class", "classes", "lesson", "program", "course", "workshop", "youth", "kids", "children", "after school", "after-school", "academy"]
+  },
+  "report": {
+    "max_rows_per_table": 75
+  }
+}

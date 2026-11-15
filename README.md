@@ -1,74 +1,96 @@
-# AI Agent for Kids Course Selection
+# AIAgentClassSelect — Kids Activity Discovery & Tracking
 
-**AIAgentClassSelect** is a Python-based AI agent that automatically searches, summarizes, and categorizes courses and activities suitable for children ages 6–8. It integrates web scraping with AI summarization (OpenAI GPT) and can run weekly using GitHub Actions.
+A personal tool that checks a curated list of **official** Bay Area provider pages for kids' classes,
+camps and activities (initial target: ages 7–8, South Bay first), keeps a history in this repo, and
+shows what is **new / updated / unchanged / no longer listed** on each run.
 
----
+It runs only when you click **Run workflow** in GitHub Actions. There is no schedule, no paid API and no secrets.
 
-## Features
+## How to use it (GitHub)
 
-- Scrapes multiple websites for kids' courses and activities
-- Cleans, deduplicates, and categorizes courses (STEM, Art, Dance, etc.)
-- Uses GPT API to summarize courses and generate Markdown outputs
-- Tracks new and updated courses with historical comparison
-- Optional email/Slack notifications with weekly updates
-- Fully automated using GitHub Actions
+1. Open the repo → **Actions** → **Activity Discovery** → **Run workflow**.
+2. Optionally change the inputs:
+   | Input | Default | Meaning |
+   |---|---|---|
+   | `min_age` / `max_age` | 7 / 8 | Report filter. Activities with no published age are still shown. |
+   | `categories` | `all` | `all`, or comma-separated keys such as `stem,music,camps` |
+   | `search_mode` | `refresh_known_sources` | `refresh_known_sources` re-checks configured sources; `discover_new_sources` only suggests new pages; `both` does both |
+3. When the run finishes, open it. The report is on the run's **Summary** page. A copy is attached as the
+   `activity-report-N` artifact.
+4. If data changed, the workflow commits `data/*.json` back to the branch it ran on.
 
----
+## What the report contains
 
-## Requirements
+- Run time and parameters, plus summary counts.
+- 🆕 New, ✏️ Updated (field: old → new), 🏕️ camps and seasonal programs, ✅ unchanged (collapsed),
+  ❔ not found this run.
+- ⚠️ Sources that failed (HTTP error, robots.txt, or nothing extractable), plus sites to check manually.
+- 🔎 Candidate pages found by discovery mode (suggestions only).
 
-- Python 3.11+
-- Packages: `requests`, `beautifulsoup4`, `openai`
-- GitHub repository for automated workflow
-- OpenAI API Key
-- Optional: SMTP credentials for email notifications
+Every value comes from the linked official page. A field the page doesn't state shows as
+**"Not published"**. Rows marked **†** are program-level records whose fields were found by text
+patterns, so confirm them on the official page. Rows without † come from structured listings or schema.org data.
+There are no ratings or recommendations.
 
----
+## Status meanings
 
-## Installation
+| Status | Meaning |
+|---|---|
+| `NEW` | First time seen (everything is NEW on the first, baseline run) |
+| `UPDATED` | Name, ages, location, schedule, sessions, dates, price, enrollment or description changed |
+| `UNCHANGED` | Re-checked and the same, after normalizing whitespace, case and dash styles and ignoring HTML changes |
+| `NOT_FOUND` | The source page was read but no longer lists it. The record is kept. |
+| `FETCH_FAILED` | Its source could not be fetched or yielded nothing. The previous data is kept and marked not verified. |
 
-1. Clone the repository:
+If **every** source fails, nothing is written and the run is marked failed, so history is never overwritten
+with an empty result.
+
+## Adding sources, cities, categories, ages
+
+All of this is configuration. No code changes are needed.
+
+- **`config/sources.json`**: add an entry with `id` (never change it later), `provider`, `url`,
+  `categories`, `city`, and optionally `program_type`, `season`, `course_name`.
+  - `"parser": "page"` (default) gives one program-level record per page.
+  - `"parser": "listing"` gives one record per item, using CSS selectors (see the Club SciKidz entry).
+  - `"manual_only": true` lists the site in the report for manual checking and never fetches it. Use it for
+    sites that block bots or render with JavaScript.
+  - Promising pages from discovery mode show up in `data/candidate_sources.json`. Copy one into
+    `sources.json` to start tracking it.
+- **`config/settings.json`**: categories (label, keywords), cities, default ages, request politeness
+  (user agent, delay, retries).
+
+## Run locally
 
 ```bash
-git clone https://github.com/scmbuildrelease/AIAgentClassSelect.git
-cd AIAgentClassSelect
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements-dev.txt
+
+python -m pytest -q                                   # offline tests (no network)
+
+# offline demo with fixtures: baseline run, then a simulated second run
+python -m activity_tracker --config-dir tests/fixtures/config --data-dir /tmp/demo \
+    --fixtures tests/fixtures/site_v1 --report /tmp/demo/r1.md
+python -m activity_tracker --config-dir tests/fixtures/config --data-dir /tmp/demo \
+    --fixtures tests/fixtures/site_v2 --mode both --report /tmp/demo/r2.md
+
+# real run (fetches the live sites; writes data/ and reports/report.md)
+python -m activity_tracker --min-age 7 --max-age 8 --mode refresh_known_sources
 ```
 
-2. Install Python dependencies:
-
-```bash
-pip install --upgrade pip
-pip install requests beautifulsoup4 openai
-```
-
-
-3. Set environment variables (recommended via GitHub Secrets for automation):
-
-```bash
-export OPENAI_API_KEY="your_openai_api_key"
-export EMAIL_USER="your_email@example.com"       # optional
-export EMAIL_PASS="your_email_password"          # optional
-```
-
-
-4.  Usage Run the script locally:
-
-
-```bash
-python scrape_courses.py
+## Layout
 
 ```
+activity_tracker/   fetcher (robots.txt, delays, retries) · extract · tracker (IDs, diff, storage) · discovery · report · cli
+config/             settings.json, sources.json  (edit these)
+data/               sources.json, courses.json, candidate_sources.json  (written by runs; committed)
+tests/              offline tests and HTML fixtures
+backend/, frontend/ optional small viewer that reads data/courses.json
+```
 
-5.  GitHub Actions Automation
+## Politeness
 
-The project includes a GitHub Actions workflow .github/workflows/weekly_courses.yml:
-
-Runs weekly on a schedule (cron) or manually (workflow_dispatch)
-Fetches course data, generates Markdown, and commits updates to the repository
-Optional: sends email notifications for weekly updates
-
-
-
-
-
-
+Requests identify themselves honestly (`AIAgentClassSelect/1.0 (+repo URL)`), respect robots.txt, wait
+2 seconds between requests to the same host, and retry only on timeouts and 429/5xx errors. Sites that
+block automated access are reported as failures or listed for manual checking. The tool does not try to
+work around them.

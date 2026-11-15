@@ -1,0 +1,87 @@
+name: Activity Discovery
+
+# Manual only: Actions -> Activity Discovery -> Run workflow.
+# There is intentionally no schedule, push or pull_request trigger.
+on:
+  workflow_dispatch:
+    inputs:
+      min_age:
+        description: "Minimum child age"
+        type: number
+        default: 7
+      max_age:
+        description: "Maximum child age"
+        type: number
+        default: 8
+      categories:
+        description: "Categories: 'all' or comma-separated keys (stem, writing_reading, arts, music, dance_performing, sports, social, outdoor, camps)"
+        type: string
+        default: all
+      search_mode:
+        description: "What to do"
+        type: choice
+        default: refresh_known_sources
+        options:
+          - refresh_known_sources
+          - discover_new_sources
+          - both
+
+permissions:
+  contents: write   # only to commit updated data/*.json back to the repo
+
+concurrency:
+  group: activity-discovery
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Discover and compare activities
+        env:
+          MIN_AGE: ${{ inputs.min_age }}
+          MAX_AGE: ${{ inputs.max_age }}
+          CATEGORIES: ${{ inputs.categories }}
+          SEARCH_MODE: ${{ inputs.search_mode }}
+        run: |
+          python -m activity_tracker \
+            --min-age "$MIN_AGE" --max-age "$MAX_AGE" \
+            --categories "$CATEGORIES" --mode "$SEARCH_MODE" \
+            --report reports/report.md --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: activity-report-${{ github.run_number }}
+          path: |
+            reports/report.md
+            reports/run_summary.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      # Runs only if the discovery step succeeded. That step exits non-zero (and writes nothing)
+      # when every source failed, so history is never overwritten with an empty result.
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+          git commit -m "data: activity discovery run #${{ github.run_number }} (${{ inputs.search_mode }})"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
