@@ -1,0 +1,272 @@
+{
+  "sources": {
+    "abhinaya-dance-school": {
+      "categories": [
+        "dance_performing"
+      ],
+      "city": "San Jose",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "Abhinaya Dance Company of San José",
+      "status": "OK",
+      "url": "https://abhinaya.org/dance-school/"
+    },
+    "clubscikidz-ages-7-9": {
+      "categories": [
+        "stem",
+        "camps"
+      ],
+      "city": "Multiple Silicon Valley locations",
+      "error": null,
+      "http_status": 200,
+      "items_found": 10,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "Club SciKidz Silicon Valley",
+      "status": "OK",
+      "url": "https://siliconvalley.clubscikidz.com/age-groups/ages-7-9/"
+    },
+    "cmt-classes": {
+      "categories": [
+        "dance_performing",
+        "music"
+      ],
+      "city": "San Jose",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "Children's Musical Theater San Jose",
+      "status": "OK",
+      "url": "https://www.cmtsj.org/classes/"
+    },
+    "cmt-winter-camp": {
+      "categories": [
+        "dance_performing",
+        "camps"
+      ],
+      "city": "San Jose",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "Children's Musical Theater San Jose",
+      "status": "OK",
+      "url": "https://www.cmtsj.org/camp/"
+    },
+    "coderschool-digiart": {
+      "categories": [
+        "stem",
+        "arts",
+        "camps"
+      ],
+      "city": "Multiple locations (check page for Bay Area sites)",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "theCoderSchool",
+      "status": "OK",
+      "url": "https://www.thecoderschool.com/camps/digiart/"
+    },
+    "hidden-villa-summer-camp": {
+      "categories": [
+        "outdoor",
+        "camps"
+      ],
+      "city": "Los Altos Hills",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "Hidden Villa",
+      "status": "OK",
+      "url": "https://www.hiddenvilla.org/programs/summer-camps/"
+    },
+    "milpitas-recreation": {
+      "categories": [
+        "sports",
+        "arts",
+        "camps",
+        "social"
+      ],
+      "city": "Milpitas",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "City of Milpitas Recreation & Community Services",
+      "status": "OK",
+      "url": "https://www.milpitas.gov/180/Recreation-Community-Services"
+    },
+    "openspace-kids": {
+      "categories": [
+        "outdoor"
+      ],
+      "city": "Midpeninsula preserves",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "Midpeninsula Regional Open Space District",
+      "status": "OK",
+      "url": "https://www.openspace.org/where-to-go/kids-education"
+    },
+    "pyt-classes-camps": {
+      "categories": [
+        "dance_performing",
+        "camps"
+      ],
+      "city": "Mountain View",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "Peninsula Youth Theatre",
+      "status": "OK",
+      "url": "https://www.pytnet.org/programs"
+    },
+    "sjys-camps": {
+      "categories": [
+        "music",
+        "camps"
+      ],
+      "city": "San Jose",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "San Jose Youth Symphony",
+      "status": "OK",
+      "url": "https://sjys.org/camp/"
+    },
+    "techknowhow-lego-robotics": {
+      "categories": [
+        "stem",
+        "camps"
+      ],
+      "city": "Multiple Bay Area locations",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "TechKnowHow",
+      "status": "OK",
+      "url": "https://www.techknowhowkids.com/lego-robotics"
+    },
+    "techknowhow-winter-camps": {
+      "categories": [
+        "stem",
+        "camps"
+      ],
+      "city": "Multiple Bay Area locations",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "TechKnowHow",
+      "status": "OK",
+      "url": "https://www.techknowhowkids.com/winter-camps"
+    },
+    "western-ballet-camp": {
+      "categories": [
+        "dance_performing",
+        "camps"
+      ],
+      "city": "Mountain View",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "Western Ballet",
+      "status": "OK",
+      "url": "https://westernballet.org/summercamp/"
+    },
+    "western-ballet-children": {
+      "categories": [
+        "dance_performing"
+      ],
+      "city": "Mountain View",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "Western Ballet",
+      "status": "OK",
+      "url": "https://westernballet.org/summersaturdayclasses/"
+    },
+    "ymca-school-break-camps": {
+      "categories": [
+        "camps"
+      ],
+      "city": "Multiple Silicon Valley locations",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "YMCA of Silicon Valley",
+      "status": "OK",
+      "url": "https://www.ymcasv.org/child-care-camps/holiday-camps"
+    },
+    "ymca-summer-day-camps": {
+      "categories": [
+        "camps",
+        "sports",
+        "outdoor"
+      ],
+      "city": "Multiple Silicon Valley locations",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "YMCA of Silicon Valley",
+      "status": "OK",
+      "url": "https://www.ymcasv.org/child-care-camps/summer-day-camps"
+    },
+    "ymca-swim-lessons": {
+      "categories": [
+        "sports"
+      ],
+      "city": "Multiple Silicon Valley locations",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "YMCA of Silicon Valley",
+      "status": "OK",
+      "url": "https://www.ymcasv.org/swimming/swim-lessons"
+    },
+    "ymca-youth-sports": {
+      "categories": [
+        "sports"
+      ],
+      "city": "Multiple Silicon Valley locations",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-15T16:22:47Z",
+      "last_success_at": "2026-11-15T16:22:47Z",
+      "provider": "YMCA of Silicon Valley",
+      "status": "OK",
+      "url": "https://www.ymcasv.org/family-programs-sports/youth-sports"
+    }
+  }
+}
