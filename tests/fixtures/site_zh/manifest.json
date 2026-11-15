@@ -1,0 +1,7 @@
+{
+  "https://camp.example.org/zh/robotics": {"file": "zh_robotics.html"},
+  "https://camp.example.org/en/robotics": {"file": "en_robotics.html"},
+  "https://school.example.org/zh-tw/saturday": {"file": "zh_tw_school.html"},
+  "https://art.example.org/kids-art": {"file": "mixed_art.html"},
+  "https://camp.example.org/posters/robotics.png": {"file": "poster_zh.png"}
+}

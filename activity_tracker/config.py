@@ -4,7 +4,9 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-PARSERS = {"page", "listing"}
+from .i18n import TRANSLATION_METHODS
+
+PARSERS = {"page", "listing", "poster"}
 PROGRAM_TYPES = {"weekly_class", "camp", "seasonal_program", "event", "program_info"}
 SOURCE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
@@ -28,6 +30,7 @@ class Source:
     notes: str = ""
     course_name: str | None = None
     listing: dict = field(default_factory=dict)
+    translations: dict = field(default_factory=dict)  # {"zh": {"name": ..., "method": "manual"}}
 
 
 @dataclass
@@ -39,6 +42,12 @@ class Config:
     @property
     def categories(self) -> dict:
         return self.settings["categories"]
+
+    @property
+    def cities(self) -> dict[str, list[str]]:
+        """{canonical city: [aliases]} including Chinese names from settings.city_aliases."""
+        aliases = self.settings.get("city_aliases", {})
+        return {c: aliases.get(c, []) for c in self.settings.get("cities", [])}
 
 
 def _load_json(path: Path) -> dict:
@@ -74,6 +83,11 @@ def load_config(config_dir: Path) -> Config:
             raise ConfigError(f"{src.id}: unknown or missing categories {sorted(unknown)}")
         if src.parser == "listing" and not src.listing.get("item"):
             raise ConfigError(f"{src.id}: listing parser needs listing.item selector")
+        for lang, tr in src.translations.items():
+            if not isinstance(tr, dict) or not tr.get("name"):
+                raise ConfigError(f"{src.id}: translations.{lang} needs a name")
+            if tr.get("method", "manual") not in TRANSLATION_METHODS:
+                raise ConfigError(f"{src.id}: translations.{lang}.method must be one of {sorted(TRANSLATION_METHODS)}")
         sources.append(src)
     return Config(settings=settings, sources=sources, discovery_seeds=raw.get("discovery_seeds", []))
 

@@ -11,7 +11,7 @@ NEW, UPDATED, UNCHANGED, NOT_FOUND, FETCH_FAILED = "NEW", "UPDATED", "UNCHANGED"
 # Only these fields decide whether an activity "changed". Timestamps, page titles and
 # extraction metadata are deliberately excluded.
 COMPARE_FIELDS = ["name", "age_text", "location", "schedule", "sessions", "start_date", "end_date",
-                  "price", "enrollment_status", "description"]
+                  "price", "enrollment_status", "description", "registration_url"]
 HISTORY_LIMIT = 10
 TRACKING_PARAMS = re.compile(r"^(utm_|fbclid|gclid|mc_|_ga)", re.I)
 
@@ -58,8 +58,10 @@ def assign_ids(records: list[dict]) -> list[dict]:
 
 
 def diff_fields(old: dict, new: dict) -> list[dict]:
+    # A field missing from the stored record was added to the schema after it was saved:
+    # the first value seen is a new baseline, not a change made by the provider.
     return [{"field": f, "old": old.get(f), "new": new.get(f)}
-            for f in COMPARE_FIELDS if normalize_text(old.get(f)) != normalize_text(new.get(f))]
+            for f in COMPARE_FIELDS if f in old and normalize_text(old.get(f)) != normalize_text(new.get(f))]
 
 
 class Store:

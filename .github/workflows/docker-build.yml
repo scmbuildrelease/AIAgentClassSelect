@@ -4,7 +4,7 @@ name: Build Docker images
 on:
   push:
     branches: [main]
-    paths: ["backend/**", "frontend/**"]
+    paths: ["backend/**", "frontend/**", "activity_tracker/**", "config/settings.json"]
   workflow_dispatch:
 
 permissions:
@@ -25,7 +25,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          context: .
+          file: backend/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/aiagentclassselect-backend:latest

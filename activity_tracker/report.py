@@ -1,5 +1,6 @@
 """Markdown report for $GITHUB_STEP_SUMMARY and the downloadable artifact."""
 from . import NOT_PUBLISHED
+from .i18n import lang_group
 from .tracker import NEW, UPDATED, UNCHANGED, NOT_FOUND, FETCH_FAILED
 
 STATUS_ICON = {NEW: "🆕 NEW", UPDATED: "✏️ UPDATED", UNCHANGED: "✅ UNCHANGED",
@@ -44,8 +45,15 @@ def dates(rec: dict) -> str:
 
 
 def activity_cell(rec: dict) -> str:
+    """Original title (as published) plus any other-language title, labelled by where it came from."""
     marker = "" if rec.get("extraction") in ("listing", "json-ld") else " †"
-    return link(rec.get("name"), rec.get("detail_url") or rec.get("source_url")) + marker
+    out = link(rec.get("name"), rec.get("detail_url") or rec.get("source_url")) + marker
+    own = lang_group(rec.get("original_language"))
+    for lang, tr in sorted((rec.get("translations") or {}).items()):
+        if lang != own and tr.get("name"):
+            label = {"machine": "machine translation", "manual": "translation"}.get(tr.get("method"), "provider")
+            out += f"<br>🌐 {cell(tr['name'], 80)} _({label})_"
+    return out
 
 
 def category_labels(rec: dict, categories: dict) -> str:
@@ -82,7 +90,8 @@ def build_report(run: dict, config, max_rows: int | None = None) -> str:
     processed = set(run["processed_source_ids"])
     selected = set(p["categories"])
 
-    in_scope = [r for r in store.values() if selected & set(r.get("categories", []))]
+    # cross-language duplicates are shown once, under the primary record (see search.link_language_variants)
+    in_scope = [r for r in store.values() if selected & set(r.get("categories", [])) and not r.get("duplicate_of")]
     shown = sorted((r for r in in_scope if age_matches(r, p["min_age"], p["max_age"])), key=_sort_key)
     outside_age = len(in_scope) - len(shown)
     checked = [r for r in shown if r["source_id"] in processed]

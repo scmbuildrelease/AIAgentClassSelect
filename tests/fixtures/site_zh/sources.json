@@ -1,0 +1,16 @@
+{
+  "sources": [
+    {"id": "zh-robotics", "provider": "示例科学中心", "url": "https://camp.example.org/zh/robotics",
+     "categories": ["stem", "camps"], "city": "Multiple locations", "program_type": "camp"},
+    {"id": "en-robotics", "provider": "Example Science Center", "url": "https://camp.example.org/en/robotics",
+     "categories": ["stem", "camps"], "city": "Multiple locations", "program_type": "camp"},
+    {"id": "tw-chinese-school", "provider": "示例中文學校", "url": "https://school.example.org/zh-tw/saturday",
+     "categories": ["writing_reading"], "city": "Multiple locations", "program_type": "weekly_class",
+     "translations": {"en": {"name": "Example Chinese School - Saturday Class", "method": "manual"}}},
+    {"id": "mixed-art", "provider": "Example Art Studio 示例画室", "url": "https://art.example.org/kids-art",
+     "categories": ["arts"], "city": "Sunnyvale", "program_type": "weekly_class"},
+    {"id": "poster-robotics", "provider": "示例科学中心", "url": "https://camp.example.org/posters/robotics.png",
+     "categories": ["stem", "camps"], "city": "San Jose", "parser": "poster", "program_type": "camp",
+     "course_name": "机器人编程夏令营 (海报)"}
+  ]
+}

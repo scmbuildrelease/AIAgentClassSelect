@@ -60,6 +60,34 @@ All of this is configuration. No code changes are needed.
 - **`config/settings.json`**: categories (label, keywords), cities, default ages, request politeness
   (user agent, delay, retries).
 
+## Chinese and English (中文 / English)
+
+- **Originals are never changed.** `name` and `description` are stored as the source published them
+  (whitespace runs collapsed only). `original_language` is `en`, `zh-Hans`, `zh-Hant`, `zh` or `mixed`.
+- **`translations`** sit next to the original: `{"en": {"name": ..., "method": ...}}`, where `method` is:
+  - `provider`: the provider's own page in the other language (a linked duplicate)
+  - `manual`: written by a person in `config/sources.json` (`"translations"` on a source)
+  - `machine`: always labelled "machine translation". **None are generated today.**
+- **Extraction** handles English, Simplified and Traditional Chinese, and mixed text:
+  - ages: 7-9岁 / 6至10歲 / 一至三年级
+  - dates: 2027年6月14日至6月18日
+  - times: 周一至周五 9:00-15:00, 每週六 上午9點到12點
+  - prices: $450/周, 450美元, 学费：免费
+  - enrollment: 报名中 / 名额已满 / 报名已截止
+  - registration links: 立即报名 / Register
+  - Chinese city names: 圣何塞 → San Jose
+  - Full-width characters are handled. Single dates and unstated fields are never guessed.
+- **Search** (`GET /courses?q=…&lang=en|zh`) uses the `glossary` in `config/settings.json`
+  (机器人 = robotics, 编程 = coding, 数学 = math, 美术 = art, 夏令营 = summer camp, 中文学校 = Chinese school, …).
+  It works across Simplified and Traditional script. Add terms there; no code changes needed.
+- **Cross-language duplicates**: the same activity on a provider's Chinese and English pages is linked, not
+  merged. Matching requires the same site plus the same registration link, or the same dates, ages and a shared
+  glossary concept. It's shown once, with the other title as a `provider` translation.
+- **Posters (OCR)** are optional. Set `"parser": "poster"` on a source whose URL is an image. This needs the
+  system `tesseract` with Chinese data: `brew install tesseract tesseract-lang`, or
+  `apt-get install tesseract-ocr tesseract-ocr-chi-sim tesseract-ocr-chi-tra`. Without it, the poster
+  source is reported as not readable instead of being silently skipped.
+
 ## Run locally
 
 ```bash

@@ -3,55 +3,214 @@
   "default_age_min": 7,
   "default_age_max": 8,
   "cities": [
-    "San Jose", "Santa Clara", "Milpitas", "Sunnyvale", "Cupertino", "Mountain View",
-    "Campbell", "Saratoga", "Los Gatos", "Los Altos", "Palo Alto", "Morgan Hill",
-    "Fremont", "San Mateo", "Belmont", "Burlingame", "Foster City", "Oakland", "San Francisco"
+    "San Jose",
+    "Santa Clara",
+    "Milpitas",
+    "Sunnyvale",
+    "Cupertino",
+    "Mountain View",
+    "Campbell",
+    "Saratoga",
+    "Los Gatos",
+    "Los Altos",
+    "Palo Alto",
+    "Morgan Hill",
+    "Fremont",
+    "San Mateo",
+    "Belmont",
+    "Burlingame",
+    "Foster City",
+    "Oakland",
+    "San Francisco"
   ],
   "categories": {
     "stem": {
       "label": "Math, Science, STEM & Coding",
       "short": "STEM",
-      "keywords": ["math", "science", "stem", "steam", "coding", "code", "robot", "engineer", "lego", "minecraft", "chess", "tech"]
+      "keywords": [
+        "math",
+        "science",
+        "stem",
+        "steam",
+        "coding",
+        "code",
+        "robot",
+        "engineer",
+        "lego",
+        "minecraft",
+        "chess",
+        "tech",
+        "数学",
+        "科学",
+        "编程",
+        "程式设计",
+        "机器人",
+        "乐高",
+        "工程",
+        "国际象棋",
+        "围棋",
+        "奥数"
+      ]
     },
     "writing_reading": {
       "label": "Writing & Reading",
       "short": "Reading/Writing",
-      "keywords": ["writing", "reading", "book", "story", "library", "literacy"]
+      "keywords": [
+        "writing",
+        "reading",
+        "book",
+        "story",
+        "library",
+        "literacy",
+        "阅读",
+        "写作",
+        "中文",
+        "中文学校",
+        "语文",
+        "读书",
+        "故事"
+      ]
     },
     "arts": {
       "label": "Drawing, Painting, Arts & Crafts",
       "short": "Arts",
-      "keywords": ["art", "drawing", "painting", "craft", "ceramic", "clay", "animation"]
+      "keywords": [
+        "art",
+        "drawing",
+        "painting",
+        "craft",
+        "ceramic",
+        "clay",
+        "animation",
+        "美术",
+        "绘画",
+        "画画",
+        "手工",
+        "书法",
+        "陶艺"
+      ]
     },
     "music": {
       "label": "Piano, Instruments & Singing",
       "short": "Music",
-      "keywords": ["music", "piano", "violin", "guitar", "orchestra", "symphony", "choir", "sing", "vocal", "instrument"]
+      "keywords": [
+        "music",
+        "piano",
+        "violin",
+        "guitar",
+        "orchestra",
+        "symphony",
+        "choir",
+        "sing",
+        "vocal",
+        "instrument",
+        "音乐",
+        "钢琴",
+        "小提琴",
+        "合唱",
+        "声乐",
+        "乐器",
+        "古筝"
+      ]
     },
     "dance_performing": {
       "label": "Dance & Performing Arts",
       "short": "Dance/Theater",
-      "keywords": ["dance", "ballet", "theater", "theatre", "acting", "drama", "musical", "improv", "hip hop"]
+      "keywords": [
+        "dance",
+        "ballet",
+        "theater",
+        "theatre",
+        "acting",
+        "drama",
+        "musical",
+        "improv",
+        "hip hop",
+        "舞蹈",
+        "芭蕾",
+        "戏剧",
+        "表演",
+        "民族舞"
+      ]
     },
     "sports": {
       "label": "Sports & Physical Activities",
       "short": "Sports",
-      "keywords": ["sport", "swim", "soccer", "basketball", "tennis", "gymnastic", "martial", "karate", "skating", "climb"]
+      "keywords": [
+        "sport",
+        "swim",
+        "soccer",
+        "basketball",
+        "tennis",
+        "gymnastic",
+        "martial",
+        "karate",
+        "skating",
+        "climb",
+        "体育",
+        "游泳",
+        "足球",
+        "篮球",
+        "网球",
+        "体操",
+        "武术",
+        "跆拳道",
+        "乒乓球",
+        "羽毛球"
+      ]
     },
     "social": {
       "label": "Playdates & Social Activities",
       "short": "Social",
-      "keywords": ["playdate", "social", "storytime", "family", "club", "meetup"]
+      "keywords": [
+        "playdate",
+        "social",
+        "storytime",
+        "family",
+        "club",
+        "meetup",
+        "亲子",
+        "社交",
+        "家庭",
+        "俱乐部"
+      ]
     },
     "outdoor": {
       "label": "Hiking, Outdoors & Nature",
       "short": "Outdoors",
-      "keywords": ["hike", "hiking", "outdoor", "nature", "farm", "garden", "open space", "ranger", "wilderness"]
+      "keywords": [
+        "hike",
+        "hiking",
+        "outdoor",
+        "nature",
+        "farm",
+        "garden",
+        "open space",
+        "ranger",
+        "wilderness",
+        "户外",
+        "徒步",
+        "远足",
+        "自然",
+        "农场"
+      ]
     },
     "camps": {
       "label": "Summer, Winter & Break Camps",
       "short": "Camps",
-      "keywords": ["camp", "summer", "winter break", "spring break", "school break", "holiday"]
+      "keywords": [
+        "camp",
+        "summer",
+        "winter break",
+        "spring break",
+        "school break",
+        "holiday",
+        "夏令营",
+        "冬令营",
+        "暑期",
+        "寒假",
+        "春假"
+      ]
     }
   },
   "request": {
@@ -62,9 +221,292 @@
   },
   "discovery": {
     "max_candidates_per_page": 15,
-    "program_words": ["camp", "class", "classes", "lesson", "program", "course", "workshop", "youth", "kids", "children", "after school", "after-school", "academy"]
+    "program_words": [
+      "camp",
+      "class",
+      "classes",
+      "lesson",
+      "program",
+      "course",
+      "workshop",
+      "youth",
+      "kids",
+      "children",
+      "after school",
+      "after-school",
+      "academy",
+      "课程",
+      "班",
+      "营",
+      "培训",
+      "兴趣班",
+      "課程",
+      "營"
+    ]
   },
   "report": {
     "max_rows_per_table": 75
-  }
+  },
+  "city_aliases": {
+    "San Jose": [
+      "圣何塞",
+      "聖荷西",
+      "聖何塞"
+    ],
+    "Santa Clara": [
+      "圣克拉拉",
+      "聖塔克拉拉"
+    ],
+    "Milpitas": [
+      "苗必达",
+      "苗必達"
+    ],
+    "Sunnyvale": [
+      "森尼韦尔",
+      "桑尼維爾"
+    ],
+    "Cupertino": [
+      "库比蒂诺",
+      "庫比蒂諾"
+    ],
+    "Mountain View": [
+      "山景城"
+    ],
+    "Palo Alto": [
+      "帕洛阿尔托",
+      "帕羅奧圖"
+    ],
+    "Fremont": [
+      "弗里蒙特",
+      "佛利蒙"
+    ],
+    "San Francisco": [
+      "旧金山",
+      "舊金山",
+      "三藩市"
+    ],
+    "Oakland": [
+      "奥克兰",
+      "奧克蘭"
+    ]
+  },
+  "glossary": [
+    {
+      "key": "robotics",
+      "terms": [
+        "robotics",
+        "robot",
+        "机器人"
+      ]
+    },
+    {
+      "key": "coding",
+      "terms": [
+        "coding",
+        "programming",
+        "code",
+        "scratch",
+        "python",
+        "编程",
+        "程式设计",
+        "程序设计"
+      ]
+    },
+    {
+      "key": "math",
+      "terms": [
+        "math",
+        "mathematics",
+        "数学",
+        "奥数"
+      ]
+    },
+    {
+      "key": "science",
+      "terms": [
+        "science",
+        "stem",
+        "steam",
+        "科学"
+      ]
+    },
+    {
+      "key": "lego",
+      "terms": [
+        "lego",
+        "乐高"
+      ]
+    },
+    {
+      "key": "art",
+      "terms": [
+        "art",
+        "arts",
+        "fine art",
+        "美术",
+        "艺术"
+      ]
+    },
+    {
+      "key": "drawing",
+      "terms": [
+        "drawing",
+        "painting",
+        "绘画",
+        "画画"
+      ]
+    },
+    {
+      "key": "summer_camp",
+      "terms": [
+        "summer camp",
+        "夏令营"
+      ]
+    },
+    {
+      "key": "winter_camp",
+      "terms": [
+        "winter camp",
+        "冬令营"
+      ]
+    },
+    {
+      "key": "camp",
+      "terms": [
+        "camp",
+        "营"
+      ]
+    },
+    {
+      "key": "chinese_school",
+      "terms": [
+        "chinese school",
+        "chinese language school",
+        "mandarin school",
+        "中文学校"
+      ]
+    },
+    {
+      "key": "chinese",
+      "terms": [
+        "chinese",
+        "mandarin",
+        "中文",
+        "汉语",
+        "华语"
+      ]
+    },
+    {
+      "key": "reading",
+      "terms": [
+        "reading",
+        "阅读"
+      ]
+    },
+    {
+      "key": "writing",
+      "terms": [
+        "writing",
+        "写作"
+      ]
+    },
+    {
+      "key": "piano",
+      "terms": [
+        "piano",
+        "钢琴"
+      ]
+    },
+    {
+      "key": "music",
+      "terms": [
+        "music",
+        "音乐"
+      ]
+    },
+    {
+      "key": "singing",
+      "terms": [
+        "singing",
+        "choir",
+        "vocal",
+        "合唱",
+        "声乐",
+        "唱歌"
+      ]
+    },
+    {
+      "key": "dance",
+      "terms": [
+        "dance",
+        "舞蹈"
+      ]
+    },
+    {
+      "key": "ballet",
+      "terms": [
+        "ballet",
+        "芭蕾"
+      ]
+    },
+    {
+      "key": "theater",
+      "terms": [
+        "theater",
+        "theatre",
+        "drama",
+        "acting",
+        "戏剧",
+        "表演"
+      ]
+    },
+    {
+      "key": "swimming",
+      "terms": [
+        "swim",
+        "swimming",
+        "游泳"
+      ]
+    },
+    {
+      "key": "soccer",
+      "terms": [
+        "soccer",
+        "足球"
+      ]
+    },
+    {
+      "key": "basketball",
+      "terms": [
+        "basketball",
+        "篮球"
+      ]
+    },
+    {
+      "key": "chess",
+      "terms": [
+        "chess",
+        "国际象棋"
+      ]
+    },
+    {
+      "key": "hiking",
+      "terms": [
+        "hiking",
+        "hike",
+        "徒步",
+        "远足"
+      ]
+    },
+    {
+      "key": "outdoor",
+      "terms": [
+        "outdoor",
+        "outdoors",
+        "nature",
+        "户外",
+        "自然"
+      ]
+    }
+  ]
 }

@@ -1,6 +1,8 @@
 """Polite HTTP fetching: honest user agent, robots.txt, per-host delay, retries."""
+import codecs
 import json
 import logging
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,6 +13,24 @@ import requests
 
 log = logging.getLogger(__name__)
 RETRY_STATUSES = {429, 500, 502, 503, 504}
+META_CHARSET_RE = re.compile(rb"""<meta[^>]+charset\s*=\s*["']?\s*([A-Za-z0-9_-]+)""", re.I)
+# decode with the superset so characters outside the declared legacy charset survive
+CHARSET_SUPERSETS = {"gb2312": "gb18030", "gbk": "gb18030", "big5": "big5hkscs"}
+
+
+def html_encoding(header_encoding: str | None, body: bytes) -> str | None:
+    """Charset from the HTTP header, else from <meta charset>, else None (let requests detect)."""
+    enc = header_encoding if header_encoding and header_encoding.lower() != "iso-8859-1" else None
+    if not enc:
+        m = META_CHARSET_RE.search(body[:4096])
+        enc = m.group(1).decode("ascii") if m else None
+    if not enc:
+        return None
+    try:
+        name = codecs.lookup(enc).name
+    except LookupError:
+        return None
+    return CHARSET_SUPERSETS.get(name, name)
 
 
 @dataclass
@@ -21,6 +41,7 @@ class FetchResult:
     http_status: int | None = None
     final_url: str | None = None
     html: str = ""
+    content: bytes = b""
     error: str | None = None
 
 
@@ -78,9 +99,8 @@ class Fetcher:
                 log.warning("attempt %d failed for %s: %s", attempt + 1, url, last_error)
                 continue
             if r.status_code == 200:
-                if not r.encoding or r.encoding.lower() == "iso-8859-1":
-                    r.encoding = r.apparent_encoding
-                return FetchResult(url, True, "OK", 200, r.url, r.text)
+                r.encoding = html_encoding(r.encoding, r.content) or r.apparent_encoding
+                return FetchResult(url, True, "OK", 200, r.url, r.text, r.content)
             last_status, last_error = r.status_code, f"HTTP {r.status_code}"
             if r.status_code not in RETRY_STATUSES:
                 break
@@ -102,8 +122,11 @@ class FixtureFetcher:
         if entry is None:
             return FetchResult(url, False, "NETWORK_ERROR", error="ConnectionError: fixture not found")
         if "file" in entry:
-            html = (self.dir / entry["file"]).read_text(encoding="utf-8")
-            return FetchResult(url, True, "OK", 200, url, html)
+            path = self.dir / entry["file"]
+            if path.suffix.lower() in (".png", ".jpg", ".jpeg", ".gif", ".webp"):
+                return FetchResult(url, True, "OK", 200, url, "", path.read_bytes())
+            html = path.read_text(encoding="utf-8")
+            return FetchResult(url, True, "OK", 200, url, html, html.encode("utf-8"))
         if entry.get("robots_blocked"):
             return FetchResult(url, False, "BLOCKED_BY_ROBOTS", error="Disallowed by robots.txt")
         code = entry.get("status", 500)

@@ -10,6 +10,7 @@ from .config import ConfigError, load_config, parse_category_filter
 from .discovery import find_candidates, merge_candidates
 from .extract import extract
 from .fetcher import Fetcher, FixtureFetcher
+from .search import Glossary, link_language_variants
 from .report import build_report
 from .tracker import Store, assign_ids, merge_source, normalize_url, update_source_state
 
@@ -51,7 +52,7 @@ def run_discovery(config, store: Store, fetcher, params: dict, now: datetime | N
             if result.ok:
                 try:
                     records = assign_ids(extract(result.html, source, result.final_url or source.url,
-                                                 config.settings.get("cities", [])))
+                                                 config.cities, result.content))
                 except Exception as e:  # a parser bug on one site must not break the run
                     log.exception("extraction failed for %s", source.id)
                     entry["error"] = f"Extraction error: {type(e).__name__}: {e}"
@@ -80,6 +81,9 @@ def run_discovery(config, store: Store, fetcher, params: dict, now: datetime | N
                 found = find_candidates(result.html, seed["url"], config.settings, config.categories)
                 new_candidates += merge_candidates(candidates, found, seed["url"], known_urls, today)
             source_results.append(entry)
+
+    if refresh:
+        link_language_variants(courses, Glossary(config.settings.get("glossary", [])))
 
     attempted = [s for s in source_results if s["status"] != "MANUAL"]
     succeeded = [s for s in attempted if s["status"] == "OK"]

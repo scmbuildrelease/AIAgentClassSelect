@@ -9,6 +9,7 @@ from urllib.parse import urljoin, urlsplit
 from bs4 import BeautifulSoup
 
 from .extract import clean
+from .i18n import CJK_RE
 from .tracker import normalize_url
 
 EXCLUDE_RE = re.compile(
@@ -17,9 +18,14 @@ EXCLUDE_RE = re.compile(
     r"birthday|wp-content)", re.I)
 
 
+def _word(term: str) -> str:
+    """Word-start match for English; plain substring for Chinese (no spaces between words)."""
+    return re.escape(term) if CJK_RE.search(term) else rf"\b{re.escape(term)}"
+
+
 def find_candidates(html: str, page_url: str, settings: dict, categories: dict) -> list[dict]:
     disc = settings.get("discovery", {})
-    program_re = re.compile(r"\b(" + "|".join(map(re.escape, disc.get("program_words", []))) + r")", re.I)
+    program_re = re.compile("|".join(_word(w) for w in disc.get("program_words", [])) or r"(?!)", re.I)
     soup = BeautifulSoup(html, "html.parser")
     site = urlsplit(page_url).netloc.removeprefix("www.")
     base = soup.find("base", href=True)
@@ -35,7 +41,7 @@ def find_candidates(html: str, page_url: str, settings: dict, categories: dict) 
         if EXCLUDE_RE.search(href) or EXCLUDE_RE.search(text) or not program_re.search(haystack):
             continue
         cats = [key for key, cat in categories.items()
-                if any(re.search(rf"\b{re.escape(k)}", haystack, re.I) for k in cat.get("keywords", []))]
+                if any(re.search(_word(k), haystack, re.I) for k in cat.get("keywords", []))]
         key = normalize_url(href)
         if key and key not in found and key != normalize_url(page_url):
             found[key] = {"url": href.split("#")[0], "anchor_text": text[:120], "suggested_categories": cats}
