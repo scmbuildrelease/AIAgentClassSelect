@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import Assistant from "./Assistant";
 
 // UI text only. Activity titles/descriptions come from the API exactly as published.
 const UI = {
@@ -76,6 +77,7 @@ function App() {
           </select>
         </label>
       </div>
+      <Assistant lang={lang} />
       {courses.length === 0 && <p>{t.none}</p>}
       {courses.map(c => {
         const shown = c.display || { name: c.title, kind: "original" };

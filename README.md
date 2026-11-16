@@ -118,10 +118,27 @@ docker buildx imagetools inspect ghcr.io/<owner>/aiagentclassselect-backend:late
 docker compose up --build                                                             # or build locally
 ```
 
+## AI Assistant (optional, local)
+
+The viewer has an **AI Assistant** panel (`POST /agent/chat`). A local Qwen model running in
+[Ollama](https://ollama.com) on your machine chooses among four tools: `search_activities`, `filter_by_age`,
+`filter_by_date` and `get_activity_details`. These reuse the tracker's own search and filters and only read
+`data/courses.json`. Activity cards and links come from the tool results. The model only writes the summary
+text, and it can be imprecise. There are no API keys and no cloud models.
+
+```bash
+ollama list                              # needs the Ollama app running and qwen2.5:1.5b installed
+docker compose up --build                # backend uses http://host.docker.internal:11434
+```
+
+Configure with `AI_ENABLED`, `AI_PROVIDER=ollama`, `AI_MODEL` and `AI_BASE_URL`; it's off unless `AI_ENABLED=true`.
+Discovery runs and reports don't use it. See [docs/AI_AGENT_MVP.md](docs/AI_AGENT_MVP.md) for the architecture,
+tools, test results and limitations.
+
 ## Layout
 
 ```
-activity_tracker/   fetcher (robots.txt, delays, retries) · extract · tracker (IDs, diff, storage) · discovery · report · cli
+activity_tracker/   fetcher (robots.txt, delays, retries) · extract · tracker (IDs, diff, storage) · discovery · report · cli · agent (optional AI assistant)
 config/             settings.json, sources.json  (edit these)
 data/               sources.json, courses.json, candidate_sources.json  (written by runs; committed)
 tests/              offline tests and HTML fixtures

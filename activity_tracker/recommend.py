@@ -52,6 +52,20 @@ def _date(text: str | None) -> date | None:
     return None
 
 
+def date_span(rec: dict) -> tuple[date, date | None] | None:
+    """(first, last) published date, from sessions or start/end; last is None when only a start is
+    published (it may still be running). None when no full date is published."""
+    sessions = sorted(d for d in (_date(s) for s in rec.get("sessions") or []) if d)
+    if sessions:
+        return sessions[0], sessions[-1]
+    start, end = _date(rec.get("start_date")), _date(rec.get("end_date"))
+    if start:
+        return start, end
+    if end:
+        return end, end
+    return None
+
+
 def lifecycle(rec: dict, today: date) -> str:
     """UPCOMING / ONGOING / PAST / DATE_UNKNOWN from explicit dates only.
 
