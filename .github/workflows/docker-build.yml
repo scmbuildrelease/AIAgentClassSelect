@@ -1,6 +1,8 @@
 name: Build Docker images
 
 # Builds the optional backend/frontend viewer images when their code changes.
+# Images are multi-platform (linux/amd64 + linux/arm64, e.g. Apple Silicon): QEMU emulates arm64 on the
+# amd64 runner and Buildx publishes one image index per tag.
 on:
   push:
     branches: [main]
@@ -18,6 +20,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Get short SHA
         run: echo "SHORT_SHA=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -27,6 +33,7 @@ jobs:
         with:
           context: .
           file: backend/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/aiagentclassselect-backend:latest
@@ -34,6 +41,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: ./frontend
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/${{ github.repository_owner }}/aiagentclassselect-frontend:latest

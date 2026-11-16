@@ -106,6 +106,18 @@ python -m activity_tracker --config-dir tests/fixtures/config --data-dir /tmp/de
 python -m activity_tracker --min-age 7 --max-age 8 --mode refresh_known_sources
 ```
 
+## Viewer images (Docker)
+
+The optional backend/frontend viewer is published by `.github/workflows/docker-build.yml` as multi-platform
+images for **linux/amd64 and linux/arm64** (Apple Silicon pulls arm64 automatically):
+
+```bash
+docker pull ghcr.io/<owner>/aiagentclassselect-backend:latest
+docker pull ghcr.io/<owner>/aiagentclassselect-frontend:latest
+docker buildx imagetools inspect ghcr.io/<owner>/aiagentclassselect-backend:latest   # lists both platforms
+docker compose up --build                                                             # or build locally
+```
+
 ## Layout
 
 ```

@@ -30,3 +30,22 @@ def test_no_workflow_is_scheduled_and_discovery_needs_no_secrets():
     assert "secrets." not in text and "OPENAI" not in text
     for other in ("tests.yml", "docker-build.yml"):
         assert "python -m activity_tracker" not in (WORKFLOWS / other).read_text()
+
+
+def test_docker_images_are_multi_platform():
+    """Both images must publish amd64 and arm64 (Apple Silicon) variants under the same tags."""
+    wf = load("docker-build.yml")
+    assert set(wf["on"]) == {"push", "workflow_dispatch"}
+    assert wf["permissions"] == {"contents": "read", "packages": "write"}
+    steps = wf["jobs"]["build"]["steps"]
+    uses = [s.get("uses", "") for s in steps]
+    qemu, buildx = uses.index("docker/setup-qemu-action@v3"), uses.index("docker/setup-buildx-action@v3")
+    builds = [i for i, u in enumerate(uses) if u.startswith("docker/build-push-action@")]
+    assert len(builds) == 2 and qemu < buildx < min(builds)
+    for i, image in zip(builds, ("backend", "frontend")):
+        with_ = steps[i]["with"]
+        assert with_["platforms"] == "linux/amd64,linux/arm64"
+        assert with_["push"] is True
+        assert with_["tags"].strip().splitlines() == [
+            f"ghcr.io/${{{{ github.repository_owner }}}}/aiagentclassselect-{image}:latest",
+            f"ghcr.io/${{{{ github.repository_owner }}}}/aiagentclassselect-{image}:main-${{{{ env.SHORT_SHA }}}}"]
