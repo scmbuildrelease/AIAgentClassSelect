@@ -211,6 +211,54 @@
         "寒假",
         "春假"
       ]
+    },
+    "language": {
+      "label": "Chinese & Language Classes",
+      "short": "Language",
+      "keywords": [
+        "chinese class",
+        "mandarin class",
+        "chinese school",
+        "language class",
+        "中文课",
+        "中文班",
+        "中文学校",
+        "中文學校",
+        "汉语",
+        "拼音",
+        "注音"
+      ]
+    },
+    "after_school": {
+      "label": "After-school Programs",
+      "short": "After-school",
+      "keywords": [
+        "after school",
+        "after-school",
+        "afterschool",
+        "课后班",
+        "課後班",
+        "课后",
+        "課後",
+        "托管"
+      ]
+    },
+    "family_events": {
+      "label": "Family & Community Events",
+      "short": "Family events",
+      "keywords": [
+        "family event",
+        "family day",
+        "festival",
+        "storytime",
+        "story time",
+        "亲子活动",
+        "親子活動",
+        "亲子",
+        "親子",
+        "节庆",
+        "市集"
+      ]
     }
   },
   "request": {
@@ -506,6 +554,35 @@
         "nature",
         "户外",
         "自然"
+      ]
+    },
+    {
+      "key": "after_school",
+      "terms": [
+        "after school",
+        "after-school",
+        "afterschool",
+        "课后班",
+        "课后",
+        "托管"
+      ]
+    },
+    {
+      "key": "family_event",
+      "terms": [
+        "family event",
+        "parent-child",
+        "亲子活动",
+        "亲子"
+      ]
+    },
+    {
+      "key": "kendo",
+      "terms": [
+        "kendo",
+        "martial arts",
+        "剑道",
+        "武术"
       ]
     }
   ]

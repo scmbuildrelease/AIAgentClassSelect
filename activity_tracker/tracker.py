@@ -11,7 +11,7 @@ NEW, UPDATED, UNCHANGED, NOT_FOUND, FETCH_FAILED = "NEW", "UPDATED", "UNCHANGED"
 # Only these fields decide whether an activity "changed". Timestamps, page titles and
 # extraction metadata are deliberately excluded.
 COMPARE_FIELDS = ["name", "age_text", "location", "schedule", "sessions", "start_date", "end_date",
-                  "price", "enrollment_status", "description", "registration_url"]
+                  "price", "enrollment_status", "description", "registration_url", "campus"]
 HISTORY_LIMIT = 10
 TRACKING_PARAMS = re.compile(r"^(utm_|fbclid|gclid|mc_|_ga)", re.I)
 
@@ -48,12 +48,16 @@ def make_id(source_id: str, detail_url: str | None, name: str | None, disambigua
 
 
 def assign_ids(records: list[dict]) -> list[dict]:
+    """Campus is part of the key, so one program offered at several campuses keeps stable IDs
+    (records without a campus get the same IDs as before campuses existed)."""
     seen: dict[str, int] = {}
     for rec in records:
-        base = make_id(rec["source_id"], rec.get("detail_url"), rec.get("name"))
+        campus = rec.get("campus") or ""
+        base = make_id(rec["source_id"], rec.get("detail_url"), rec.get("name"), campus)
         n = seen.get(base, 0) + 1
         seen[base] = n
-        rec["id"] = base if n == 1 else make_id(rec["source_id"], rec.get("detail_url"), rec.get("name"), str(n))
+        rec["id"] = base if n == 1 else make_id(rec["source_id"], rec.get("detail_url"), rec.get("name"),
+                                                f"{campus}|{n}" if campus else str(n))
     return records
 
 
@@ -95,12 +99,20 @@ class Store:
             self._write(self.candidates_path, candidates)
 
 
-def update_source_state(state: dict, source, result, now: str, items_found: int | None) -> str:
-    """Record a fetch attempt. Returns the source status for this run."""
+def update_source_state(state: dict, source, result, now: str, items_found: int | None,
+                        org_only: bool = False) -> str:
+    """Record a fetch attempt. Returns the source status for this run.
+
+    org_only: the source has only organization-level pages, so finding no activities is expected.
+    """
     entry = state["sources"].setdefault(source.id, {})
     entry.update({"provider": source.provider, "url": source.url, "categories": source.categories,
                   "city": source.city, "last_attempted_at": now})
-    if not result.ok:
+    if result.ok and org_only:
+        status = "OK"
+        entry.update({"status": status, "http_status": 200, "error": None, "last_success_at": now,
+                      "items_found": 0})
+    elif not result.ok:
         status = "FETCH_FAILED" if result.status != "BLOCKED_BY_ROBOTS" else "BLOCKED_BY_ROBOTS"
         entry.update({"status": status, "http_status": result.http_status, "error": result.error})
     elif not items_found:
@@ -117,11 +129,12 @@ def update_source_state(state: dict, source, result, now: str, items_found: int 
 
 
 def merge_source(courses: dict, source_id: str, source_ok: bool, scraped: list[dict],
-                 today: str, now: str) -> list[dict]:
+                 today: str, now: str, failed_pages: set[str] | frozenset = frozenset()) -> list[dict]:
     """Merge one source's scrape into the course store. Returns per-course change events.
 
     source_ok=False (failed fetch or empty extraction) never removes or downgrades data:
-    existing records are kept and flagged as not recently verified.
+    existing records are kept and flagged as not recently verified. The same applies to records
+    of a multi-page source whose own page (source_url, normalized) is in failed_pages.
     """
     store = courses["courses"]
     events = []
@@ -159,6 +172,10 @@ def merge_source(courses: dict, source_id: str, source_ok: bool, scraped: list[d
 
     for cid in sorted(existing_ids - seen):
         rec = store[cid]
+        if normalize_url(rec.get("source_url")) in failed_pages:
+            rec["status"], rec["verified"] = FETCH_FAILED, False
+            events.append({"id": cid, "status": FETCH_FAILED})
+            continue
         rec["status"], rec["verified"], rec["last_checked"] = NOT_FOUND, False, now
         rec["missing_since"] = rec.get("missing_since") or today
         events.append({"id": cid, "status": NOT_FOUND})

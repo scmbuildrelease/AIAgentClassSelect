@@ -112,16 +112,44 @@ def same_activity(a: dict, b: dict, glossary: Glossary) -> bool:
     return bool(glossary.segment(a.get("name") or "")[0] & glossary.segment(b.get("name") or "")[0])
 
 
+def link_aggregator_duplicates(recs: list[dict]) -> int:
+    """An aggregator event whose original event URL is a page tracked directly from the provider
+    (detail or registration URL) is the same activity: the provider's own record is primary.
+    A URL shared by several provider records (one page listing several camps) is ambiguous: no link."""
+    direct: dict[str, set] = {}
+    by_id = {r["id"]: r for r in recs}
+    for rec in recs:
+        if rec.get("extraction") != "aggregator":
+            for key in (rec.get("detail_url"), rec.get("registration_url")):
+                if normalize_url(key):
+                    direct.setdefault(normalize_url(key), set()).add(rec["id"])
+    links = 0
+    for rec in recs:
+        ids: set[str] = set()
+        if rec.get("extraction") == "aggregator":
+            ids = direct.get(normalize_url(rec.get("original_event_url")), set())
+        primary = by_id[next(iter(ids))] if len(ids) == 1 else None
+        if primary and not primary.get("duplicate_of"):
+            rec["duplicate_of"] = primary["id"]
+            primary.setdefault("also_listed_by", []).append({"source_id": rec["source_id"], "record_id": rec["id"],
+                                                            "url": rec.get("aggregator_url")})
+            links += 1
+    return links
+
+
 def link_language_variants(store: dict, glossary: Glossary) -> int:
-    """Link cross-language duplicates. Both records keep their own history; the secondary gets
-    `duplicate_of` and the primary gets the secondary's original text as a provider translation.
+    """Link duplicates: aggregator listings of directly tracked events, then cross-language twins.
+
+    Both records keep their own history; the secondary gets `duplicate_of`. For language twins the
+    primary gets the secondary's original text as a provider translation.
     Recomputed from scratch each run, so it is idempotent. Returns the number of links."""
     recs = sorted(store["courses"].values(), key=lambda r: (r.get("first_seen") or "", r["id"]))
     for rec in recs:
         rec["duplicate_of"] = None
+        rec.pop("also_listed_by", None)
         rec["translations"] = {k: v for k, v in (rec.get("translations") or {}).items()
                                if v.get("method") != "provider"}
-    links = 0
+    links = link_aggregator_duplicates(recs)
     for i, primary in enumerate(recs):
         if primary["duplicate_of"]:
             continue

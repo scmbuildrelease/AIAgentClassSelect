@@ -5,6 +5,11 @@ Strategies, recorded on each record as `extraction`:
   - "json-ld":   schema.org Event/Course/Product data embedded by the site
   - "page_text": one program-level record per page, fields found by text patterns
   - "ocr":       one record per poster image, fields found by the same text patterns
+  - "sections":  one record per heading on a page (e.g. several camps on one page)
+  - "name_list": one record per course name listed under a heading; other fields stay unknown
+  - "aggregator": events embedded as JSON by an aggregator site (Next.js payload); each record keeps
+                 the original organizer and event URL. An aggregator listing is not confirmation
+                 by the organizer.
 
 Patterns cover English, Simplified and Traditional Chinese, and mixed text. When several
 patterns match, the one appearing first in the text wins. Fields that cannot be found stay
@@ -17,7 +22,7 @@ import unicodedata
 from datetime import date
 from urllib.parse import urljoin
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup, NavigableString, Tag
 
 from .i18n import detect_language, lang_group
 
@@ -55,7 +60,8 @@ PRICE_ZH_RE = re.compile(rf"(?<![\d.,])\d{{1,3}}(?:,\d{{3}})*(?:\.\d{{2}})?\s*(?
 PRICE_FREE_RE = re.compile(r"(?:学费|學費|费用|費用|价格|價格|收费|收費)\s*:?\s*(免费|免費)|(?:tuition|cost|price)\s*:?\s*(free)\b", re.I)
 PRICE_SKIP_RE = re.compile(
     r"(fee|discount|off\b|ext\s?care|extended|refund|cancel|save|donat|deposit|lab|"
-    r"报名费|報名費|注册费|註冊費|手续费|手續費|材料费|材料費|折扣|优惠|優惠|退款|押金|订金|訂金|托管|延时|延時)", re.I)
+    r"报名费|報名費|注册费|註冊費|手续费|手續費|材料费|材料費|折扣|"
+    r"优惠(?!价)|優惠(?!價)|退款|押金|订金|訂金|托管|延时|延時)", re.I)
 
 DATE_RANGE_RE = re.compile(
     rf"({MONTH})\s+(\d{{1,2}}){ORD}(?:,?\s*(\d{{4}}))?\s*{DASH}\s*(?:({MONTH})\s+)?(\d{{1,2}}){ORD}(?:,?\s*(\d{{4}}))?", re.I)
@@ -64,9 +70,14 @@ DATE_ZH_RE = re.compile(
     rf"(?:(\d{{4}})\s*年\s*)?(?:(\d{{1,2}})\s*月\s*)?(\d{{1,2}})\s*[日号號]")
 NUMERIC_DATE_RE = re.compile(r"(?<!\d)(\d{1,2})/(\d{1,2})(?:/|\s+)(20\d{2})(?!\d)")
 YMD_DATE_RE = re.compile(r"(?<!\d)(20\d{2})[/.-](\d{1,2})[/.-](\d{1,2})(?!\d)")
+# "6/15-7/17" (no year): ISO only when the caller passes a year published on the same page
+MD_RANGE_RE = re.compile(r"(?<![\d/])(\d{1,2})/(\d{1,2})(?![\d/])\s*(?:-|–|—|~|至|到)\s*"
+                         r"(\d{1,2})/(\d{1,2})(?![\d/])")
+YEAR_RE = re.compile(r"(?<!\d)(20\d{2})(?!\d)")
 
 SCHEDULE_RE = re.compile(
-    rf"(?:\b{DAY}(?:\s*(?:-|–|—|&|and|,|/)\s*{DAY})*[\s,:\[]*)?(?<![\d:])\b{TIME}\s*(?:-|–|—|to)\s*{TIME_END}", re.I)
+    rf"(?:\b{DAY}(?:\s*(?:-|–|—|&|and|,|/)\s*{DAY})*[\s,:\[]*)?"
+    rf"(?<![\d:A-Za-z]){TIME}\s*(?:-|–|—|to)\s*{TIME_END}", re.I)
 SCHEDULE_ZH_RE = re.compile(
     rf"(?:(?:每\s*)?{ZH_DAY}(?:\s*{ZDASH}\s*{ZH_DAY}|\s*[、和及]\s*(?:{ZH_DAY}|[一二三四五六日天]))*\s*[,:]?\s*)?"
     rf"(?<![\d:]){ZH_TIME}\s*{ZDASH}\s*{ZH_TIME}")
@@ -178,7 +189,7 @@ def parse_age(text: str) -> tuple[str | None, int | None, int | None, str | None
     for m, lo, hi, basis in _age_candidates(text):
         if lo is None and hi is None:
             continue
-        if (lo is not None and not 0 < lo <= 21) or (hi is not None and not 0 < hi <= 21):
+        if (lo is not None and not 0 <= lo <= 21) or (hi is not None and not 0 < hi <= 21):
             continue
         if lo is not None and hi is not None and (lo > hi or (basis == "grade" and lo == hi)):
             continue
@@ -224,14 +235,23 @@ def _zh_range(m) -> tuple[str, str]:
             _iso(y2 or year1, int(mo2), d2) or f"{int(mo2)}月{int(d2)}日")
 
 
-def find_dates(text: str) -> tuple[str | None, str | None]:
+def _md_range(m, year: int | None) -> tuple[str, str]:
+    mo1, d1, mo2, d2 = (int(g) for g in m.groups())
+    return (_iso(year, mo1, d1) or f"{mo1}/{d1}", _iso(year, mo2, d2) or f"{mo2}/{d2}")
+
+
+def find_dates(text: str, year: int | None = None) -> tuple[str | None, str | None]:
     """First date range in text. ISO dates when a year is published, else the text as published.
 
-    Single dates are ignored on purpose: alone they are often deadlines or "updated on" dates.
+    `year` is a year stated elsewhere on the same page (e.g. the heading "2026 夏令营"); it is
+    used only for month/day ranges that omit the year. Single dates are ignored on purpose:
+    alone they are often deadlines or "updated on" dates.
     """
     text = _nfkc(text)
-    m = _first(DATE_RANGE_RE.search(text), DATE_ZH_RE.search(text))
+    m = _first(DATE_RANGE_RE.search(text), DATE_ZH_RE.search(text), MD_RANGE_RE.search(text))
     if m:
+        if m.re is MD_RANGE_RE:
+            return _md_range(m, year)
         return _en_range(m) if m.re is DATE_RANGE_RE else _zh_range(m)
     nums = [(int(y), int(mo), int(d)) for mo, d, y in NUMERIC_DATE_RE.findall(text)]
     nums += [(int(y), int(mo), int(d)) for y, mo, d in YMD_DATE_RE.findall(text)]
@@ -321,6 +341,15 @@ def strip_site_suffix(title: str | None, provider: str) -> str | None:
     return " - ".join(parts)
 
 
+RECORD_TYPES = {"weekly_class": "class", "camp": "camp", "event": "event"}
+
+
+def safe_url(url: str | None) -> str | None:
+    """Only absolute http(s) URLs are kept (no javascript:, data:, mailto: ...). Spaces are encoded."""
+    url = (url or "").strip().replace(" ", "%20")
+    return url if re.match(r"https?://[^\s<>\"']+$", url) else None
+
+
 def _base_record(source, page_url: str, page_title: str | None) -> dict:
     return {
         "source_id": source.id, "provider": source.provider, "categories": list(source.categories),
@@ -329,6 +358,8 @@ def _base_record(source, page_url: str, page_title: str | None) -> dict:
         "age_basis": None, "location": None, "schedule": None, "sessions": [], "start_date": None,
         "end_date": None, "price": None, "enrollment_status": None, "description": None,
         "registration_url": None, "season": source.season,
+        "organization_name": getattr(source, "org_name", source.provider),
+        "source_type": getattr(source, "source_type", "activity_provider"), "campus": None,
     }
 
 
@@ -336,7 +367,9 @@ def _finish(rec: dict, source, text: str, cities) -> dict:
     """Fill fields shared by all strategies; never overwrite values a strategy already found."""
     if rec["age_text"] is None:
         rec["age_text"], rec["age_min"], rec["age_max"], rec["age_basis"] = parse_age(text)
-    if rec["location"] is None:
+    if rec["location"] is None and getattr(source, "location", None):
+        rec["location"] = source.location
+    elif rec["location"] is None and getattr(source, "detect_location", True):
         found = detect_cities(text, cities)
         if source.city and not source.city.lower().startswith("multiple"):
             rec["location"] = source.city
@@ -350,6 +383,12 @@ def _finish(rec: dict, source, text: str, cities) -> dict:
     if rec["description"] and len(rec["description"]) > 400:
         rec["description"] = rec["description"][:397].rstrip() + "..."
     rec["original_language"] = detect_language(rec["name"], rec["description"])
+    rec["record_type"] = RECORD_TYPES.get(rec["program_type"], "program")
+    rec["grade_range"] = rec["age_text"] if rec["age_basis"] == "grade" else None
+    rec["currency"] = "USD" if re.search(r"\$|美元|美金|USD", rec["price"] or "") else None
+    for key in ("detail_url", "registration_url", "original_event_url"):
+        if key in rec:
+            rec[key] = safe_url(rec[key])
     # human-written translations from config; the original name/description are never replaced
     rec["translations"] = {lang_group(k) or k: {"method": "manual", **v}
                            for k, v in (getattr(source, "translations", None) or {}).items()}
@@ -491,7 +530,191 @@ def extract_page(soup: BeautifulSoup, source, page_url: str, cities) -> list[dic
         (p for p in (clean(p.get_text(" ")) for p in soup.find_all("p")) if p and len(p) > 80), None)
     _text_fields(rec, text, description)
     rec["registration_url"] = find_registration_url(soup.find("main") or soup.body or soup, page_url)
+    if getattr(source, "campus_links", None):
+        return split_campuses(soup, rec, source, page_url, text, cities)
     return [_finish(rec, source, text, cities)]
+
+
+def split_campuses(soup, rec: dict, source, page_url: str, text: str, cities) -> list[dict]:
+    """One record per campus that has its own registration link ("Register Now- Fremont").
+
+    Only campuses the page links to are created; a campus is never assumed.
+    """
+    pattern = re.compile(source.campus_links["pattern"], re.I)
+    addresses = source.campus_links.get("addresses", {})
+    out, seen = [], set()
+    for a in soup.find_all("a", href=True):
+        m = pattern.search(clean(a.get_text(" ")) or "")
+        href = safe_url(urljoin(page_url, a["href"]))
+        if not m or not href:
+            continue
+        campus = (clean(m.group("campus")) or "").title()
+        if not campus or campus in seen:
+            continue
+        seen.add(campus)
+        out.append(_finish({**rec, "campus": campus, "registration_url": href,
+                            "location": addresses.get(campus, campus)}, source, text, cities))
+    return out or [_finish(rec, source, text, cities)]
+
+
+def _year_hint(root) -> int | None:
+    """The year in the main heading of the content area, if exactly one is stated there."""
+    h1 = root.find("h1")
+    years = set(YEAR_RE.findall(_nfkc(h1.get_text(" ")))) if h1 else set()
+    return int(years.pop()) if len(years) == 1 else None
+
+
+def extract_sections(soup: BeautifulSoup, source, page_url: str, cities) -> list[dict]:
+    """One record per heading (default h3) inside a container; the text up to the next heading is
+    that record's body. Works on loosely nested legacy HTML (unclosed <p>, <li>)."""
+    cfg = source.sections
+    page_title = _page_title(soup)
+    root = soup.select_one(cfg.get("container", "main")) or soup.body or soup
+    year = _year_hint(root)
+    for tag in root(["script", "style", "noscript", "svg"]):
+        tag.decompose()
+    heads = {id(h): h for h in root.select(cfg.get("heading", "h3"))}
+    registration = find_registration_url(root, page_url)
+    sections: list[tuple[Tag, list[str]]] = []
+    current: tuple[Tag, list[str]] | None = None
+    for node in root.descendants:
+        if isinstance(node, Tag) and id(node) in heads:
+            current = (node, [])
+            sections.append(current)
+        elif current and type(node) is NavigableString and not any(id(p) == id(current[0]) for p in node.parents):
+            current[1].append(str(node))
+    records = []
+    for head, parts in sections:
+        name, body = clean(head.get_text(" ")), clean(" ".join(parts)) or ""
+        if not name:
+            continue
+        rec = _base_record(source, page_url, page_title)
+        rec.update(extraction="page_text", name=name, detail_url=page_url, description=body or None,
+                   registration_url=registration)
+        _text_fields(rec, body, None)
+        rec["start_date"], rec["end_date"] = find_dates(body, year)
+        records.append(_finish(rec, source, f"{name} {body}", cities))
+    return records
+
+
+def extract_name_list(soup: BeautifulSoup, source, page_url: str, cities) -> list[dict]:
+    """Course names listed one per line in the block after a heading (site builders such as Wix).
+
+    Only the name is published, so every other field stays unknown; nothing is inferred from it.
+    """
+    cfg = source.name_list
+    blocks = soup.select(cfg["block"])
+    heading = cfg.get("after_heading")
+    if heading:
+        idx = next((i for i, b in enumerate(blocks) if heading in (b.get_text(" ") or "")), None)
+        blocks = blocks[idx + 1: idx + 2] if idx is not None else []
+    page_title = _page_title(soup)
+    records = []
+    for block in blocks:
+        for line in dict.fromkeys(clean(t) for t in block.stripped_strings):
+            if not line or len(line) < 2:
+                continue
+            rec = _base_record(source, page_url, page_title)
+            rec.update(extraction="page_text", name=line, detail_url=page_url)
+            records.append(_finish(rec, source, "", cities))
+    return records
+
+
+NEXT_CHUNK_RE = re.compile(r'self\.__next_f\.push\(\[1,("(?:[^"\\]|\\.)*")\]\)')
+
+
+def _nextjs_event_array(html: str) -> list[dict]:
+    """The largest JSON array of event objects (with title + sessions) in a Next.js page payload."""
+    payload = "".join(json.loads(c) for c in NEXT_CHUNK_RE.findall(html))
+    decoder, best = json.JSONDecoder(), []  # type: tuple[json.JSONDecoder, list[dict]]
+    for m in re.finditer(r'\[\{"id":"', payload):
+        try:
+            items, _ = decoder.raw_decode(payload, m.start())
+        except json.JSONDecodeError:
+            continue
+        if len(items) > len(best) and all(isinstance(i, dict) and "title" in i and "sessions" in i for i in items):
+            best = items
+    return best
+
+
+def _session_text(s: dict) -> str:
+    times = "–".join(t for t in (s.get("start"), s.get("end")) if t)
+    return clean(f"{s.get('date', '')} {times}") or ""
+
+
+def extract_aggregator_events(html: str, source, page_url: str, cities) -> list[dict]:
+    """Events from an aggregator page. The aggregator's own (translated) title and summary are kept
+    as published; the organizer's title, name and event URL are kept alongside.
+
+    Age groups are the aggregator's filters (e.g. 小学 6–12): kept as published, never narrowed.
+    """
+    cfg = source.aggregator
+    regions, cat_map, groups = cfg["regions"], cfg.get("category_map", {}), source.age_groups
+    records = []
+    for ev in _nextjs_event_array(html):
+        title = clean(str(ev.get("title") or ""))
+        sessions = [s for s in ev.get("sessions") or [] if isinstance(s, dict) and s.get("date")]
+        if not title or not sessions:
+            continue
+        rec = _base_record(source, page_url, None)
+        organizer_url = safe_url(ev.get("sourceUrl"))
+        venue, city = clean(ev.get("venue")), clean(ev.get("city"))
+        region = regions.get(ev.get("region"))
+        ev_groups = [g for g in ev.get("ages") or [] if g in groups]
+        dates = sorted(s["date"] for s in sessions)
+        rec.update(
+            extraction="aggregator", name=title, detail_url=organizer_url, original_event_url=organizer_url,
+            aggregator_url=page_url, aggregator_event_id=clean(str(ev.get("id") or "")) or None,
+            original_title_en=clean(ev.get("originalTitle")), organizer=clean(ev.get("source")),
+            description=clean(ev.get("summary")), notes=clean(ev.get("note")),
+            price=clean(ev.get("price")), admission=ev.get("admission"),
+            location=", ".join(dict.fromkeys(x for x in (venue, city) if x)) or None,
+            city=city, region=region, sessions=[_session_text(s) for s in sessions],
+            start_date=dates[0], end_date=dates[-1], schedule=_session_text(sessions[0]) + (
+                f" (+{len(sessions) - 1} more)" if len(sessions) > 1 else ""),
+            recurrence="one_time" if len(sessions) == 1 else "multiple_sessions",
+            age_groups=[groups[g]["label"] for g in ev_groups],
+            age_group_min=min((groups[g]["min"] for g in ev_groups), default=None),
+            age_group_max=max((groups[g]["max"] for g in ev_groups), default=None),
+            verification="aggregator_listing",
+        )
+        mapped = [c for c in cat_map.get(ev.get("category"), []) if c in source.categories]
+        rec["categories"] = mapped or list(source.categories)
+        note = clean(ev.get("ageNote"))
+        rec["age_text"] = note
+        # Notes like "0–5岁及5–10岁" or "适合6岁以上，9岁以下需成人陪同" hold several statements (ranges,
+        # supervision rules, exclusions). Their combined meaning is not reliably machine-readable, so
+        # numeric ages are taken only from a note with exactly one age statement; otherwise the note is
+        # shown as published and only the aggregator's age group is used for filtering.
+        if note and len(list(_age_candidates(_nfkc(note)))) == 1:
+            _, rec["age_min"], rec["age_max"], rec["age_basis"] = parse_age(note)
+        records.append(_finish(rec, source, "", cities))
+    return records
+
+
+BAY_AREA_TERMS = ["bay area", "湾区", "灣區", "south bay", "east bay", "north bay", "peninsula",
+                  "南湾", "南灣", "东湾", "東灣", "北湾", "北灣", "半岛", "半島", "silicon valley", "硅谷", "矽谷"]
+
+
+def geo_filter(records: list[dict], source, cities) -> tuple[list[dict], list[dict]]:
+    """Keep records explicitly located in the Bay Area. Returns (kept, excluded).
+
+    Applies to sources with require_bay_area (location text must name the Bay Area or a configured
+    city) and to aggregators (the event's region must be one of the configured regions).
+    A record with no location is excluded: being listed by a Bay Area organization is not enough.
+    """
+    names = [n.lower() for ns in city_table(cities).values() for n in ns] + BAY_AREA_TERMS
+    kept: list[dict] = []
+    excluded: list[dict] = []
+    for rec in records:
+        if source.parser == "nextjs_events":
+            ok = rec.get("region") is not None
+        elif source.require_bay_area:
+            ok = any(n in (rec.get("location") or "").lower() for n in names)
+        else:
+            ok = True
+        (kept if ok else excluded).append(rec)
+    return kept, excluded
 
 
 def extract_poster(content: bytes, source, page_url: str, cities) -> list[dict]:
@@ -515,9 +738,17 @@ def extract_poster(content: bytes, source, page_url: str, cities) -> list[dict]:
 
 
 def extract(html: str, source, page_url: str, cities, content: bytes = b"") -> list[dict]:
+    if source.parser == "organization":
+        return []
     if source.parser == "poster":
         return extract_poster(content, source, page_url, cities)
+    if source.parser == "nextjs_events":
+        return extract_aggregator_events(html, source, page_url, cities)
     soup = BeautifulSoup(html, "html.parser")
+    if source.parser == "sections":
+        return extract_sections(soup, source, page_url, cities)
+    if source.parser == "name_list":
+        return extract_name_list(soup, source, page_url, cities)
     if source.parser == "listing":
         base = soup.find("base", href=True)  # relative links resolve against <base href>, as browsers do
         return extract_listing(soup, source, urljoin(page_url, base["href"]) if base else page_url, cities)

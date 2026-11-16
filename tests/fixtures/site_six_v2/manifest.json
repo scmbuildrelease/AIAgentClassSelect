@@ -1,0 +1,14 @@
+{
+  "https://www.mygredu.com/": {"file": "../site_six/mygredu_home.html"},
+  "https://www.mygredu.com/summer-camp": {"file": "../site_six/mygredu_camp.html"},
+  "https://www.happychildhoodedu.com/": {"file": "../site_six/happy_home.html"},
+  "https://www.happychildhoodedu.com/cn/summer.html": {"file": "../site_six/happy_summer.html"},
+  "https://brightupkids.org/zh/": {"file": "../site_six/brightup_zh.html"},
+  "https://www.lovingtreeacademy.com/": {"file": "../site_six/lovingtree_home.html"},
+  "https://www.lovingtreeacademy.com/blog": {"file": "../site_six/lovingtree_afterschool.html"},
+  "https://www.lovingtreeacademy.com/projects": {"status": 500},
+  "https://hongwuxie887.wixsite.com/redshoes": {"file": "../site_six/redshoes_home.html"},
+  "https://hongwuxie887.wixsite.com/redshoes/about": {"file": "redshoes_about.html"},
+  "https://hongwuxie887.wixsite.com/redshoes/contact": {"file": "../site_six/redshoes_contact.html"},
+  "https://ranchen.org/weekend": {"status": 503}
+}

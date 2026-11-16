@@ -14,7 +14,7 @@ on:
         type: number
         default: 8
       categories:
-        description: "Categories: 'all' or comma-separated keys (stem, writing_reading, arts, music, dance_performing, sports, social, outdoor, camps)"
+        description: "Categories: 'all' or comma-separated keys (stem, writing_reading, arts, music, dance_performing, sports, social, outdoor, camps, language, after_school, family_events)"
         type: string
         default: all
       search_mode:

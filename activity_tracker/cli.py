@@ -6,9 +6,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .config import ConfigError, load_config, parse_category_filter
+from .config import AGGREGATOR, ConfigError, load_config, parse_category_filter
 from .discovery import find_candidates, merge_candidates
-from .extract import extract
+from .extract import extract, geo_filter
 from .fetcher import Fetcher, FixtureFetcher
 from .search import Glossary, link_language_variants
 from .report import build_report
@@ -29,7 +29,7 @@ def run_discovery(config, store: Store, fetcher, params: dict, now: datetime | N
     selected = set(params["categories"])
 
     source_results, events, new_candidates, processed = [], [], [], []
-    known_urls = {normalize_url(s.url) for s in config.sources}
+    known_urls = {normalize_url(v.url) for s in config.sources for v in s.page_views()}
     known_urls |= {normalize_url(s["url"]) for s in config.discovery_seeds}
     known_urls |= {normalize_url(c.get("detail_url")) for c in courses["courses"].values()}
 
@@ -37,36 +37,65 @@ def run_discovery(config, store: Store, fetcher, params: dict, now: datetime | N
         if not source.enabled or not selected & set(source.categories):
             continue
         base = {"id": source.id, "provider": source.provider, "url": source.url,
-                "categories": source.categories, "notes": source.notes}
+                "categories": source.categories, "notes": source.notes, "source_type": source.source_type,
+                "language": source.language, "locations": source.locations or source.geographic_scope,
+                "verification_status": source.verification_status}
+        if source.verification_status != "VERIFIED":
+            source_results.append({**base, "status": "PENDING_VERIFICATION"})
+            continue
         if source.manual_only:
             source_results.append({**base, "status": "MANUAL"})
             continue
-        log.info("fetching %s (%s)", source.id, source.url)
-        result = fetcher.get(source.url)
         kept = sum(1 for c in courses["courses"].values() if c["source_id"] == source.id)
-        entry = {**base, "status": "OK" if result.ok else ("BLOCKED_BY_ROBOTS"
-                 if result.status == "BLOCKED_BY_ROBOTS" else "FETCH_FAILED"),
-                 "http_status": result.http_status, "error": result.error, "kept_records": kept}
-        if refresh:
-            records = []
-            if result.ok:
+        records, pages, excluded, failed_pages, results = [], [], [], set(), []
+        for view in source.page_views():
+            log.info("fetching %s (%s)", source.id, view.url)
+            result = fetcher.get(view.url)
+            page = {"url": view.url, "role": view.role, "parser": view.parser, "http_status": result.http_status,
+                    "status": "OK" if result.ok else ("BLOCKED_BY_ROBOTS" if result.status == "BLOCKED_BY_ROBOTS"
+                                                      else "FETCH_FAILED"), "error": result.error, "items": 0}
+            if refresh and result.ok and view.role == "activities":
                 try:
-                    records = assign_ids(extract(result.html, source, result.final_url or source.url,
-                                                 config.cities, result.content))
-                except Exception as e:  # a parser bug on one site must not break the run
-                    log.exception("extraction failed for %s", source.id)
-                    entry["error"] = f"Extraction error: {type(e).__name__}: {e}"
-            status = update_source_state(sources_state, source, result, now_s, len(records))
-            entry["status"] = status
-            entry["error"] = entry["error"] or sources_state["sources"][source.id].get("error")
-            entry["last_success_at"] = sources_state["sources"][source.id].get("last_success_at")
-            entry["items_found"] = len(records)
+                    found = extract(result.html, view, result.final_url or view.url, config.cities, result.content)
+                    found, out = geo_filter(found, view, config.cities)
+                    excluded += [{"name": r.get("name"), "location": r.get("location") or r.get("region")}
+                                 for r in out]
+                    page["items"] = len(found)
+                    records += found
+                except Exception as e:  # a parser bug on one page must not break the run
+                    log.exception("extraction failed for %s (%s)", source.id, view.url)
+                    page.update(status="EXTRACTION_ERROR", error=f"Extraction error: {type(e).__name__}: {e}")
+            if view.role == "activities":
+                results.append((page, result))
+                if page["status"] != "OK":
+                    failed_pages.add(normalize_url(view.url))
+            if discover and result.ok and source.source_type != AGGREGATOR:  # aggregators link to hundreds of sites
+                found = find_candidates(result.html, view.url, config.settings, config.categories)
+                new_candidates += merge_candidates(candidates, found, view.url, known_urls, today)
+            pages.append(page)
+
+        ok_results = [r for p_, r in results if p_["status"] == "OK"]
+        any_failed = next((r for p_, r in results if p_["status"] != "OK"), None)
+        main = ok_results[0] if ok_results else (any_failed or result)
+        errors = (pages[0]["error"] if len(pages) == 1 else
+                  "; ".join(f"{p_['url']}: {p_['error']}" for p_ in pages if p_["error"]) or None)
+        entry = {**base, "status": pages[0]["status"], "http_status": main.http_status, "error": errors,
+                 "kept_records": kept, "pages": pages, "excluded": excluded}
+        if refresh:
+            records = assign_ids(records)
+            status = update_source_state(sources_state, source, main, now_s, len(records), org_only=not results)
+            if status == "OK" and failed_pages:
+                status = "PARTIAL"
+            state = sources_state["sources"][source.id]
+            state.update(status=status, organization=_organization_profile(source, pages, state, now_s))
+            if status == "PARTIAL":
+                state["error"] = errors
+            entry.update(status=status, error=errors or state.get("error"),
+                         last_success_at=state.get("last_success_at"), items_found=len(records))
             known_urls |= {normalize_url(r.get("detail_url")) for r in records}
-            events += merge_source(courses, source.id, status == "OK", records, today, now_s)
+            events += merge_source(courses, source.id, status in ("OK", "PARTIAL"), records, today, now_s,
+                                   failed_pages)
             processed.append(source.id)
-        if discover and result.ok:
-            found = find_candidates(result.html, source.url, config.settings, config.categories)
-            new_candidates += merge_candidates(candidates, found, source.url, known_urls, today)
         source_results.append(entry)
 
     if discover:
@@ -85,8 +114,8 @@ def run_discovery(config, store: Store, fetcher, params: dict, now: datetime | N
     if refresh:
         link_language_variants(courses, Glossary(config.settings.get("glossary", [])))
 
-    attempted = [s for s in source_results if s["status"] != "MANUAL"]
-    succeeded = [s for s in attempted if s["status"] == "OK"]
+    attempted = [s for s in source_results if s["status"] not in ("MANUAL", "PENDING_VERIFICATION")]
+    succeeded = [s for s in attempted if s["status"] in ("OK", "PARTIAL")]
     saved, reason = True, None
     if attempted and not succeeded:
         saved, reason = False, f"all {len(attempted)} fetched sources failed or returned no activities"
@@ -101,6 +130,19 @@ def run_discovery(config, store: Store, fetcher, params: dict, now: datetime | N
     return {"run_at": now_s, "params": params, "is_baseline": is_baseline, "saved": saved,
             "not_saved_reason": reason, "source_results": source_results, "events": events,
             "processed_source_ids": processed, "courses": courses, "new_candidates": new_candidates}
+
+
+def _organization_profile(source, pages: list[dict], state: dict, now: str) -> dict:
+    """Organization-level facts kept per source (not activity records). Contact details are not stored."""
+    previous = {p["url"]: p for p in (state.get("organization") or {}).get("pages", [])}
+    return {
+        "name": source.org_name, "official_url": source.url, "source_type": source.source_type,
+        "verification_status": source.verification_status, "language": source.language,
+        "locations": source.locations, "geographic_scope": source.geographic_scope, "topics": source.topics,
+        "pages": [{"url": p["url"], "role": p["role"], "status": p["status"],
+                   "last_verified": now if p["status"] == "OK" else previous.get(p["url"], {}).get("last_verified")}
+                  for p in pages],
+    }
 
 
 def main(argv=None) -> int:

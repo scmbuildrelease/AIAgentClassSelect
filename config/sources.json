@@ -242,6 +242,144 @@
       "city": "Santa Clara",
       "manual_only": true,
       "notes": "City site returns HTTP 403 to automated requests (checked 2026-11-15)."
+    },
+    {
+      "id": "mygredu",
+      "provider": "谷雨中文学校 / MyGREDU",
+      "url": "https://www.mygredu.com/",
+      "parser": "organization",
+      "source_type": "education_provider",
+      "verification_status": "VERIFIED",
+      "language": ["zh", "en"],
+      "locations": ["Cupertino, CA", "Milpitas, CA"],
+      "topics": ["Chinese language", "Math", "English", "After-school", "Enrichment", "Seasonal camps"],
+      "categories": ["language", "stem", "writing_reading", "after_school", "arts", "camps"],
+      "city": "Multiple campuses (Cupertino, Milpitas)",
+      "pages": [
+        {"url": "https://www.mygredu.com/summer-camp", "parser": "page", "program_type": "camp", "season": "summer",
+         "categories": ["camps", "language", "stem", "writing_reading", "arts"]}
+      ],
+      "notes": "Homepage is organization-level. Summer camp page: dates, ages and prices are in images/PDFs, not page text (checked 2026-11-15). Class schedules are PDFs on the campus pages (not parsed)."
+    },
+    {
+      "id": "happy_childhood_education",
+      "provider": "快乐童年 / Happy Childhood Education Center",
+      "url": "https://www.happychildhoodedu.com/",
+      "parser": "organization",
+      "source_type": "education_provider",
+      "verification_status": "VERIFIED",
+      "language": ["zh", "en"],
+      "locations": ["San Jose, CA"],
+      "topics": ["Chinese language", "English", "Math", "Music", "Art", "Martial arts", "Python", "After-school", "Seasonal camps"],
+      "categories": ["language", "writing_reading", "stem", "music", "arts", "sports", "after_school", "camps"],
+      "city": "San Jose",
+      "pages": [
+        {"url": "https://www.happychildhoodedu.com/cn/summer.html", "parser": "sections",
+         "sections": {"container": "#content", "heading": "h3"},
+         "program_type": "camp", "season": "summer", "categories": ["camps", "stem", "arts", "language"]}
+      ],
+      "notes": "Homepage is organization-level (after-school program overview). Summer page lists each camp under its own heading; the year comes from the page heading."
+    },
+    {
+      "id": "brightup_kids",
+      "provider": "湾区中文亲子读书会 / BrightUp Kids",
+      "url": "https://brightupkids.org/zh/",
+      "parser": "listing",
+      "source_type": "community_education_provider",
+      "verification_status": "VERIFIED",
+      "language": ["zh", "en"],
+      "geographic_scope": ["San Francisco Bay Area, CA"],
+      "topics": ["Chinese reading", "Parent-child activities", "Reading club", "Community activities", "Arts and crafts"],
+      "categories": ["writing_reading", "language", "family_events", "social", "arts"],
+      "city": "San Francisco Bay Area",
+      "require_bay_area": true,
+      "detect_location": false,
+      "listing": {
+        "item": "article.program-card",
+        "title": "h3",
+        "link": "h3 a@href",
+        "fields": {
+          "description": ".program-summary",
+          "age_text": "dt:-soup-contains(\"适合年龄\") + dd",
+          "schedule": "dt:-soup-contains(\"活动时间\") + dd",
+          "location": "dt:-soup-contains(\"地点\") + dd"
+        }
+      },
+      "notes": "Program cards on the Chinese homepage. Programs outside the Bay Area (e.g. Greater Boston story time) are excluded; event dates are on an external Luma calendar (not fetched)."
+    },
+    {
+      "id": "loving_tree_academy",
+      "provider": "春雨学院 / Loving Tree Academy",
+      "url": "https://www.lovingtreeacademy.com/",
+      "parser": "organization",
+      "source_type": "education_provider",
+      "verification_status": "VERIFIED",
+      "language": ["zh", "en"],
+      "locations": ["Milpitas, CA", "Fremont, CA", "Newark, CA", "Pleasanton, CA"],
+      "topics": ["Chinese language", "After-school", "Academic enrichment", "Seasonal camps"],
+      "categories": ["language", "after_school", "stem", "arts", "camps"],
+      "city": "Multiple campuses",
+      "detect_location": false,
+      "pages": [
+        {"url": "https://www.lovingtreeacademy.com/blog", "parser": "page", "program_type": "weekly_class",
+         "categories": ["after_school", "language", "stem", "arts"],
+         "campus_links": {
+           "pattern": "Register Now\\s*-\\s*(?P<campus>[A-Za-z]+)",
+           "addresses": {
+             "Fremont": "42712 Albrae St, Fremont, CA 94538",
+             "Newark": "36601 Newark Blvd, Suite 83 & 85, Newark, CA 94560",
+             "Pleasanton": "6693 Owens Drive, Pleasanton, CA 94588",
+             "Milpitas": "1745 S Main St, Milpitas, CA 95035"
+           }
+         }},
+        {"url": "https://www.lovingtreeacademy.com/projects", "parser": "page", "program_type": "camp",
+         "categories": ["camps", "language"]}
+      ],
+      "notes": "Campuses are kept separate: a program gets a campus only where the page gives that campus its own registration link. Camp page names no campus or dates (schedule is an image)."
+    },
+    {
+      "id": "red_shoes_dance_studio",
+      "provider": "红舞鞋舞校 / Red Shoes Dance Studio",
+      "url": "https://hongwuxie887.wixsite.com/redshoes",
+      "parser": "organization",
+      "source_type": "activity_provider",
+      "verification_status": "VERIFIED",
+      "language": ["zh", "en"],
+      "locations": ["Newark, CA"],
+      "topics": ["Children's dance", "Chinese dance", "Creative movement", "Latin dance"],
+      "categories": ["dance_performing"],
+      "city": "Newark",
+      "program_type": "weekly_class",
+      "pages": [
+        {"url": "https://hongwuxie887.wixsite.com/redshoes/about", "parser": "name_list",
+         "name_list": {"block": "[data-testid=richTextElement]", "after_heading": "课程介绍"}},
+        {"url": "https://hongwuxie887.wixsite.com/redshoes/contact", "parser": "organization"}
+      ],
+      "notes": "About page lists course names only (no ages, schedules or prices). Some listed courses are for adults; ages are not inferred from titles."
+    },
+    {
+      "id": "ranchen_bay_area_weekend",
+      "provider": "湾区亲子活动 / Ran Chen Weekend Activities",
+      "url": "https://ranchen.org/weekend",
+      "parser": "nextjs_events",
+      "source_type": "community_activity_aggregator",
+      "verification_status": "VERIFIED",
+      "language": ["zh"],
+      "geographic_scope": ["San Francisco Bay Area", "San Francisco", "Peninsula", "South Bay", "East Bay", "North Bay"],
+      "topics": ["Nature and animals", "Music and arts", "Festivals and markets", "Exploration and experiences", "Family activities", "Children's workshops"],
+      "categories": ["outdoor", "arts", "music", "family_events"],
+      "city": "San Francisco Bay Area",
+      "program_type": "event",
+      "detect_location": false,
+      "age_groups": {
+        "preschool": {"label": "学龄前 · 0–5 岁", "min": 0, "max": 5},
+        "primary": {"label": "小学 · 6–12 岁", "min": 6, "max": 12}
+      },
+      "aggregator": {
+        "regions": {"sf": "San Francisco", "peninsula": "Peninsula", "south": "South Bay", "east": "East Bay", "north": "North Bay"},
+        "category_map": {"nature": ["outdoor"], "creative": ["arts", "music"], "festival": ["family_events"], "discovery": ["family_events"]}
+      },
+      "notes": "Community aggregator, not a provider: each event keeps its original organizer and event URL. Listings are not confirmation by the organizer; check the original event page."
     }
   ],
   "discovery_seeds": [

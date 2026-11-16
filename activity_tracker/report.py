@@ -1,5 +1,11 @@
-"""Markdown report for $GITHUB_STEP_SUMMARY and the downloadable artifact."""
+"""Markdown report for $GITHUB_STEP_SUMMARY and the downloadable artifact.
+
+All scraped text is untrusted: cell() escapes Markdown/HTML, link() only links http(s) URLs.
+"""
+import re
+
 from . import NOT_PUBLISHED
+from .config import AGGREGATOR
 from .i18n import lang_group
 from .tracker import NEW, UPDATED, UNCHANGED, NOT_FOUND, FETCH_FAILED
 
@@ -15,26 +21,36 @@ def cell(value, limit: int = 120) -> str:
         return f"_{NOT_PUBLISHED}_"
     if isinstance(value, list):
         value = "; ".join(map(str, value))
-    text = str(value).replace("|", "\\|").replace("\n", " ").strip()
-    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+    text = re.sub(r"\s+", " ", str(value)).strip()
+    text = text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    return re.sub(r"([|\\`*_\[\]])", r"\\\1", text)
 
 
 def link(text, url) -> str:
     label = cell(text, 80)
-    return f"[{label}]({url})" if url else label
+    url = (url or "").strip()
+    if not re.match(r"https?://[^\s<>\"'()]+$", url):
+        return label  # never link javascript:, data: or malformed URLs from scraped pages
+    return f"[{label}]({url})"
 
 
 def age_matches(rec: dict, min_age: int, max_age: int) -> bool:
     lo, hi = rec.get("age_min"), rec.get("age_max")
     if lo is None and hi is None:
+        # an aggregator's age group (e.g. preschool 0–5) can rule an event out, never confirm it fits
+        g_lo, g_hi = rec.get("age_group_min"), rec.get("age_group_max")
+        if g_lo is not None and g_hi is not None:
+            return g_lo <= max_age and g_hi >= min_age
         return True  # unknown ages are shown, flagged as not published
     return (lo if lo is not None else 0) <= max_age and (hi if hi is not None else 99) >= min_age
 
 
 def ages(rec: dict) -> str:
+    groups = " " + cell("(listed under: " + "; ".join(rec["age_groups"]) + ")") if rec.get("age_groups") else ""
     if not rec.get("age_text"):
-        return f"_{NOT_PUBLISHED}_"
-    return cell(rec["age_text"]) + (" (grades)" if rec.get("age_basis") == "grade" else "")
+        return f"_{NOT_PUBLISHED}_" + groups
+    return cell(rec["age_text"]) + (" (grades)" if rec.get("age_basis") == "grade" else "") + groups
 
 
 def dates(rec: dict) -> str:
@@ -46,8 +62,14 @@ def dates(rec: dict) -> str:
 
 def activity_cell(rec: dict) -> str:
     """Original title (as published) plus any other-language title, labelled by where it came from."""
-    marker = "" if rec.get("extraction") in ("listing", "json-ld") else " †"
+    marker = "" if rec.get("extraction") in ("listing", "json-ld", "aggregator") else " †"
     out = link(rec.get("name"), rec.get("detail_url") or rec.get("source_url")) + marker
+    if rec.get("campus"):
+        out += f" · campus: {cell(rec['campus'], 40)}"
+    if rec.get("extraction") == "aggregator":
+        out += (f"<br>📋 listed by {link('aggregator', rec.get('aggregator_url'))}; organizer: "
+                f"{link(rec.get('organizer') or NOT_PUBLISHED, rec.get('original_event_url'))} "
+                f"_(not confirmed by the organizer; {RECURRENCE.get(rec.get('recurrence') or '', 'unknown')})_")
     own = lang_group(rec.get("original_language"))
     for lang, tr in sorted((rec.get("translations") or {}).items()):
         if lang != own and tr.get("name"):
@@ -78,6 +100,39 @@ def activity_table(recs: list[dict], categories: dict, max_rows: int, with_statu
     return lines
 
 
+RECURRENCE = {"one_time": "one-time", "multiple_sessions": "several sessions"}
+SOURCE_TYPE_LABELS = {"activity_provider": "Activity provider", "education_provider": "Education provider",
+                      "community_education_provider": "Community education provider",
+                      AGGREGATOR: "Community activity aggregator"}
+
+
+def source_overview(src: list[dict], store: dict, categories: dict) -> list[str]:
+    """Per-source type, language, area and extraction status; organization pages vs. activity records."""
+    typed = [s for s in src if not s.get("seed")]
+    if not typed:
+        return []
+    out = ["## 📚 Sources by type", "",
+           "_Organization pages are checked to verify the source; they never become activity records. "
+           "Aggregator events are listings by a third party, not confirmation by the organizer._", "",
+           "| Source | Type | Language | Location / scope | Status | Organization pages | Activity records "
+           "| Excluded (outside Bay Area) |", "|---|---|---|---|---|---|---|---|"]
+    for s in typed:
+        recs = [r for r in store.values() if r["source_id"] == s["id"]]
+        kinds: dict[str, int] = {}
+        for r in recs:
+            kinds[r.get("record_type") or "program"] = kinds.get(r.get("record_type") or "program", 0) + 1
+        org_pages = ", ".join("{} ({})".format(p["url"].split("://")[-1], p["status"])
+                              for p in s.get("pages", []) if p["role"] == "organization") or "—"
+        counts = ", ".join(f"{n} {kind}" for kind, n in sorted(kinds.items())) or "0"
+        excluded = "; ".join("{} ({})".format(e["name"], e.get("location") or "no location published")
+                             for e in s.get("excluded") or []) or "—"
+        kind = SOURCE_TYPE_LABELS.get(s.get("source_type") or "", s.get("source_type") or "")
+        out.append(f"| {link(s['provider'], s['url'])} | {kind} | {cell('/'.join(s.get('language') or []))} "
+                   f"| {cell(s.get('locations'), 80)} | `{s['status']}` | {cell(org_pages, 160)} | {cell(counts)} "
+                   f"| {cell(excluded, 200)} |")
+    return out + [""]
+
+
 def _sort_key(r):
     return (r.get("provider") or "", r.get("start_date") or "9999", r.get("name") or "")
 
@@ -99,7 +154,7 @@ def build_report(run: dict, config, max_rows: int | None = None) -> str:
     changes = {e["id"]: e.get("changes", []) for e in run["events"] if e["status"] == UPDATED}
 
     src = run["source_results"]
-    failed = [s for s in src if s["status"] not in ("OK", "MANUAL")]
+    failed = [s for s in src if s["status"] not in ("OK", "MANUAL", "PENDING_VERIFICATION")]
     manual = [s for s in src if s["status"] == "MANUAL"]
 
     out = ["# 🧭 Kids Activity Discovery Report", ""]
@@ -166,6 +221,7 @@ def build_report(run: dict, config, max_rows: int | None = None) -> str:
             out.append("_None._")
         out.append("")
 
+    out += source_overview(src, store, categories)
     out += [f"## ⚠️ Sources that failed or need manual verification ({len(failed) + len(manual)})", ""]
     if failed:
         out += ["| Source | Status | Detail | Last successful fetch | Activities kept (not re-verified) |",
@@ -184,6 +240,10 @@ def build_report(run: dict, config, max_rows: int | None = None) -> str:
             out.append(f"| {link(s['provider'], s['url'])} | {cell(', '.join(categories[c]['label'] for c in s['categories']))} "
                        f"| {cell(s.get('notes'))} |")
         out.append("")
+    pending = [s for s in src if s["status"] == "PENDING_VERIFICATION"]
+    if pending:
+        out += ["**Pending verification** (configured but not fetched until marked VERIFIED):", ""]
+        out += [f"- {link(s['provider'], s['url'])}" for s in pending] + [""]
     if not failed and not manual:
         out += ["_All sources fetched successfully._", ""]
 
