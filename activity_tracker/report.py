@@ -9,7 +9,7 @@ from . import NOT_PUBLISHED
 from .config import AGGREGATOR
 from .i18n import lang_group
 from .recommend import (AGE_GROUP_MATCH, AGE_MATCH_CONFIRMED, AGE_MISMATCH, AGE_UNKNOWN, DATE_UNKNOWN, ONGOING,
-                        PAST, UPCOMING, age_fit, lifecycle, not_recommended_reason)
+                        PAST, UPCOMING, age_fit, age_fit_note, covered_ages, lifecycle, not_recommended_reason)
 from .tracker import NEW, UPDATED, UNCHANGED, NOT_FOUND, FETCH_FAILED
 
 STATUS_ICON = {NEW: "🆕 NEW", UPDATED: "✏️ UPDATED", UNCHANGED: "✅ UNCHANGED",
@@ -48,7 +48,7 @@ LIFECYCLE_LABELS = {UPCOMING: "upcoming", ONGOING: "ongoing", PAST: "past", DATE
 
 
 def ages(rec: dict, ctx: dict | None = None) -> str:
-    """Age text as published, prefixed by how it fits the wanted ages when ctx is given."""
+    """Age text as published, prefixed by the fit symbol and followed by what the fit means when ctx is given."""
     groups = " " + cell("(listed under: " + "; ".join(rec["age_groups"]) + ")") if rec.get("age_groups") else ""
     if not rec.get("age_text"):
         text = f"_{NOT_PUBLISHED}_" + groups
@@ -57,9 +57,7 @@ def ages(rec: dict, ctx: dict | None = None) -> str:
     if ctx is None:
         return text
     fit = age_fit(rec, ctx["min_age"], ctx["max_age"])
-    if fit == AGE_GROUP_MATCH:
-        text += " _— event ages not confirmed_"
-    return f"{AGE_FIT_LABELS[fit]} {text}"
+    return f"{AGE_FIT_LABELS[fit]} {text} _— {cell(age_fit_note(rec, ctx['min_age'], ctx['max_age']))}_"
 
 
 def dates(rec: dict, ctx: dict | None = None) -> str:
@@ -169,6 +167,9 @@ def build_report(run: dict, config, max_rows: int | None = None) -> str:
     hidden = sorted((r for r in in_scope if reasons[r["id"]] in ("past", "adult course")), key=_sort_key)
     fits = {f: sum(1 for r in shown if age_fit(r, p["min_age"], p["max_age"]) == f)
             for f in (AGE_MATCH_CONFIRMED, AGE_GROUP_MATCH, AGE_UNKNOWN)}
+    wanted_ages = list(range(p["min_age"], p["max_age"] + 1))
+    full = sum(1 for r in shown if age_fit(r, p["min_age"], p["max_age"]) == AGE_MATCH_CONFIRMED
+               and covered_ages(r, p["min_age"], p["max_age"]) == wanted_ages)
     stages = {s: sum(1 for r in shown if lifecycle(r, today) == s) for s in (UPCOMING, ONGOING, DATE_UNKNOWN)}
     checked = [r for r in shown if r["source_id"] in processed]
     by_status = {s: [r for r in checked if r.get("status") == s] for s in STATUS_ICON}
@@ -200,8 +201,10 @@ def build_report(run: dict, config, max_rows: int | None = None) -> str:
         f"_Ages filter: activities with no published age are included and labelled \"{NOT_PUBLISHED}\"; "
         f"{outside_age} tracked activities fall outside {p['min_age']}–{p['max_age']} and are hidden._",
         "",
-        f"**Age fit of the {len(shown)} activities shown:** ✅ {fits[AGE_MATCH_CONFIRMED]} published ages include "
-        f"{p['min_age']}–{p['max_age']} · ≈ {fits[AGE_GROUP_MATCH]} only listed under an aggregator's broad age group "
+        f"**Age fit of the {len(shown)} activities shown:** ✅ {fits[AGE_MATCH_CONFIRMED]} published age range "
+        f"overlaps {p['min_age']}–{p['max_age']} ({full} cover every age in it, "
+        f"{fits[AGE_MATCH_CONFIRMED] - full} only part of it) · "
+        f"≈ {fits[AGE_GROUP_MATCH]} only listed under an aggregator's broad age group "
         f"(event ages not confirmed) · ❓ {fits[AGE_UNKNOWN]} ages not published. "
         f"**Dates:** {stages[UPCOMING]} upcoming · {stages[ONGOING]} ongoing · {stages[DATE_UNKNOWN]} dates not "
         f"published. **Hidden (kept in history):** "

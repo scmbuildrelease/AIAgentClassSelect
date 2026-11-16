@@ -250,3 +250,109 @@ def test_run_in_the_bay_area_evening_keeps_todays_events(six_run):  # noqa: F811
     assert r["today"] == "2026-11-21"
     birds = next(c for c in records(r, "ranchen_bay_area_weekend") if c["original_title_en"] == "Bay Bird Mornings")
     assert birds["sessions"] == ["2026-11-21 08:00–10:00"] and birds["lifecycle"] == ONGOING
+
+
+# --- time zone data and API/CLI agreement --------------------------------------------------------
+
+def test_bay_area_time_zone_data_is_installed():
+    """Fails (instead of silently falling back to UTC) where the tz database is missing.
+    The Docker image runs the same check at build time (backend/Dockerfile)."""
+    from datetime import datetime, timedelta, timezone
+    from zoneinfo import ZoneInfo
+    tz = json.loads((ROOT / "config/settings.json").read_text(encoding="utf-8"))["timezone"]
+    la = ZoneInfo(tz)
+    # 2026: DST ends Nov 1, so Nov 15 is PST (UTC-8); July is PDT (UTC-7)
+    assert datetime(2026, 11, 16, 4, 0, tzinfo=timezone.utc).astimezone(la).utcoffset() == timedelta(hours=-8)
+    assert datetime(2026, 7, 1, 12, 0, tzinfo=timezone.utc).astimezone(la).utcoffset() == timedelta(hours=-7)
+
+
+def test_missing_time_zone_data_is_logged(monkeypatch, caplog):
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfoNotFoundError
+    import activity_tracker.recommend as rec_mod
+
+    def missing(key):
+        raise ZoneInfoNotFoundError(key)
+    monkeypatch.setattr(rec_mod, "ZoneInfo", missing)
+    assert rec_mod.local_today(datetime(2026, 11, 16, 4, 0, tzinfo=timezone.utc)) == date(2026, 11, 16)
+    assert "unavailable; using UTC dates" in caplog.text
+
+
+def test_api_and_cli_agree_at_the_pacific_utc_boundary(six_config, tmp_path, monkeypatch):  # noqa: F811
+    """8:00 pm Pacific on Nov 15, 2026 is 04:00 UTC on Nov 16: the Bay Area date is still Nov 15."""
+    pytest.importorskip("flask")
+    pytest.importorskip("flask_cors")
+    from datetime import datetime, timezone
+    import activity_tracker.recommend as rec_mod
+    from activity_tracker.cli import run_discovery
+    from activity_tracker.fetcher import FixtureFetcher
+    from activity_tracker.tracker import Store
+    from conftest import FIXTURES
+
+    instant = datetime(2026, 11, 16, 4, 0, tzinfo=timezone.utc)
+
+    class FixedClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return instant.astimezone(tz) if tz else instant
+    monkeypatch.setattr(rec_mod, "datetime", FixedClock)  # the API reads the clock; the CLI gets `now`
+
+    data = tmp_path / "data"
+    data.mkdir()
+    (data / "courses.json").write_text(json.dumps({"meta": {}, "courses": {
+        "boundary": {"id": "boundary", "source_id": "kept-source", "name": "今日亲子活动",
+                     "sessions": ["2026-11-15 18:00–19:00"], "categories": ["family_events"]},
+        "yesterday": {"id": "yesterday", "source_id": "kept-source", "name": "昨日活动",
+                      "sessions": ["2026-11-14 10:00–11:00"], "categories": ["family_events"]},
+    }}, ensure_ascii=False), encoding="utf-8")
+    params = {"min_age": 7, "max_age": 8, "categories": list(six_config.categories), "mode": "refresh_known_sources"}
+    run = run_discovery(six_config, Store(data), FixtureFetcher(FIXTURES / "site_six"), params, now=instant)
+    assert run["today"] == "2026-11-15" and run["run_at"] == "2026-11-16T04:00:00Z"
+    cli = {cid: c["lifecycle"] for cid, c in run["courses"]["courses"].items()}
+    assert cli["boundary"] == ONGOING and cli["yesterday"] == PAST
+    assert lifecycle({"sessions": ["2026-11-15 18:00–19:00"]}, instant.date()) == PAST  # what UTC would say
+
+    monkeypatch.setenv("COURSES_FILE", str(data / "courses.json"))
+    monkeypatch.setenv("SETTINGS_FILE", str(ROOT / "config/settings.json"))
+    monkeypatch.delenv("TODAY", raising=False)
+    import importlib
+    import sys
+    sys.path.insert(0, str(ROOT / "backend"))
+    app = importlib.reload(importlib.import_module("app")).app
+    api = {c["id"]: c["lifecycle"] for c in app.test_client().get("/courses?all=1").get_json()}
+    shown = {c["id"] for c in app.test_client().get("/courses").get_json()}
+    dupes = {cid for cid, c in run["courses"]["courses"].items() if c.get("duplicate_of")}
+    assert api == {cid: v for cid, v in cli.items() if cid not in dupes}  # same result for every record
+    assert "boundary" in shown and "yesterday" not in shown
+
+
+# --- age-fit wording ------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("note, ages, fit, symbol, meaning", [
+    ("8岁及以上", ("primary",), AGE_MATCH_CONFIRMED, "✅", "overlaps 7–8: includes age 8, not age 7"),
+    ("7–8岁", ("primary",), AGE_MATCH_CONFIRMED, "✅", "published range includes ages 7 and 8"),
+    ("6–12岁", ("primary",), AGE_MATCH_CONFIRMED, "✅", "published range includes ages 7 and 8"),
+    ("适合0–7岁", ("preschool", "primary"), AGE_MATCH_CONFIRMED, "✅", "overlaps 7–8: includes age 7, not age 8"),
+    ("建议小学儿童", ("primary",), AGE_GROUP_MATCH, "≈",
+     "only a broad aggregator age group; the event's own ages are not confirmed"),
+    ("适合9–12岁", ("primary",), AGE_MISMATCH, "✖", "published range does not include 7–8"),
+    (None, (), AGE_UNKNOWN, "❓", "age not published"),
+])
+def test_age_fit_wording(note, ages, fit, symbol, meaning):
+    from activity_tracker.recommend import age_fit_note
+    from activity_tracker.report import ages as ages_cell
+    rec = _event(note, ages)
+    assert age_fit(rec, 7, 8) == fit
+    assert age_fit_note(rec, 7, 8) == meaning
+    cell_text = ages_cell(rec, {"min_age": 7, "max_age": 8, "today": TODAY})
+    assert cell_text.startswith(symbol + " ")
+    assert (note or "_Not published_") in cell_text  # original note kept word for word
+    assert meaning in cell_text.replace("\\", "")
+
+
+def test_report_summary_separates_partial_age_overlaps(six_run, six_config):  # noqa: F811
+    md = build_report(six_run(), six_config)
+    summary = next(line for line in md.splitlines() if line.startswith("**Age fit"))
+    # fixture: bird walk "6岁及以上" and 童心同行 "约 3–8 岁" cover 7 and 8; 中文图书馆 "0–7 岁" covers only 7
+    assert "✅ 3 published age range overlaps 7–8 (2 cover every age in it, 1 only part of it)" in summary
+    assert "includes age 7, not age 8" in md and "includes ages 7 and 8" in md

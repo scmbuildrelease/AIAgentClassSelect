@@ -96,6 +96,41 @@ def age_fit(rec: dict, min_age: int, max_age: int) -> str:
     return AGE_UNKNOWN
 
 
+def covered_ages(rec: dict, min_age: int, max_age: int) -> list[int]:
+    """Which whole ages of the wanted range the record's explicit range includes ("8岁及以上" -> [8] for 7–8)."""
+    lo, hi = rec.get("age_min"), rec.get("age_max")
+    if lo is None and hi is None:
+        return []
+    return [a for a in range(min_age, max_age + 1)
+            if (lo if lo is not None else 0) <= a <= (hi if hi is not None else 99)]
+
+
+def _ages(values: list[int]) -> str:
+    return f"age {values[0]}" if len(values) == 1 else "ages " + ", ".join(map(str, values[:-1])) + f" and {values[-1]}"
+
+
+def age_fit_note(rec: dict, min_age: int, max_age: int) -> str:
+    """Plain-language meaning of the age fit, e.g. 'overlaps 7–8: includes age 8, not age 7'.
+
+    Never says an activity suits the whole wanted range unless its published range covers all of it.
+    """
+    fit = age_fit(rec, min_age, max_age)
+    wanted = f"{min_age}–{max_age}" if min_age != max_age else str(min_age)
+    if fit == AGE_MATCH_CONFIRMED:
+        covered = covered_ages(rec, min_age, max_age)
+        missing = [a for a in range(min_age, max_age + 1) if a not in covered]
+        if not missing:
+            return f"published range includes {_ages(covered)}"
+        return f"overlaps {wanted}: includes {_ages(covered)}, not {_ages(missing)}"
+    if fit == AGE_GROUP_MATCH:
+        return "only a broad aggregator age group; the event's own ages are not confirmed"
+    if fit == AGE_MISMATCH:
+        if rec.get("age_min") is None and rec.get("age_max") is None:
+            return f"listed only under an aggregator age group outside {wanted}"
+        return f"published range does not include {wanted}"
+    return "age not published"
+
+
 def audience(rec: dict) -> str | None:
     """'adult' or 'children' only when the title says so explicitly; otherwise None (unknown).
     A provider being a children's school says nothing about an individual course."""

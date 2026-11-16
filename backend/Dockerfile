@@ -10,6 +10,10 @@ COPY activity_tracker ./activity_tracker
 COPY config/settings.json ./config/settings.json
 COPY backend/app.py .
 
+# Activity dates are evaluated in the Bay Area time zone (settings.json "timezone"). The base image's
+# system tz database provides it today; fail the build if it ever goes missing instead of silently using UTC.
+RUN python -c "import json, zoneinfo; zoneinfo.ZoneInfo(json.load(open('config/settings.json'))['timezone'])"
+
 RUN mkdir -p /data
 
 EXPOSE 8000
