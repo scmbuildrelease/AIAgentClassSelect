@@ -8,11 +8,76 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "Abhinaya Dance Company of San José",
+        "official_url": "https://abhinaya.org/dance-school/",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://abhinaya.org/dance-school/"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "Abhinaya Dance Company of San José",
       "status": "OK",
       "url": "https://abhinaya.org/dance-school/"
+    },
+    "brightup_kids": {
+      "categories": [
+        "writing_reading",
+        "language",
+        "family_events",
+        "social",
+        "arts"
+      ],
+      "city": "San Francisco Bay Area",
+      "error": null,
+      "http_status": 200,
+      "items_found": 3,
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [
+          "San Francisco Bay Area, CA"
+        ],
+        "language": [
+          "zh",
+          "en"
+        ],
+        "locations": [],
+        "name": "湾区中文亲子读书会 / BrightUp Kids",
+        "official_url": "https://brightupkids.org/zh/",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://brightupkids.org/zh/"
+          }
+        ],
+        "source_type": "community_education_provider",
+        "topics": [
+          "Chinese reading",
+          "Parent-child activities",
+          "Reading club",
+          "Community activities",
+          "Arts and crafts"
+        ],
+        "verification_status": "VERIFIED"
+      },
+      "provider": "湾区中文亲子读书会 / BrightUp Kids",
+      "status": "OK",
+      "url": "https://brightupkids.org/zh/"
     },
     "clubscikidz-ages-7-9": {
       "categories": [
@@ -23,8 +88,26 @@
       "error": null,
       "http_status": 200,
       "items_found": 10,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "Club SciKidz Silicon Valley",
+        "official_url": "https://siliconvalley.clubscikidz.com/age-groups/ages-7-9/",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://siliconvalley.clubscikidz.com/age-groups/ages-7-9/"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "Club SciKidz Silicon Valley",
       "status": "OK",
       "url": "https://siliconvalley.clubscikidz.com/age-groups/ages-7-9/"
@@ -38,8 +121,26 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "Children's Musical Theater San Jose",
+        "official_url": "https://www.cmtsj.org/classes/",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.cmtsj.org/classes/"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "Children's Musical Theater San Jose",
       "status": "OK",
       "url": "https://www.cmtsj.org/classes/"
@@ -53,8 +154,26 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "Children's Musical Theater San Jose",
+        "official_url": "https://www.cmtsj.org/camp/",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.cmtsj.org/camp/"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "Children's Musical Theater San Jose",
       "status": "OK",
       "url": "https://www.cmtsj.org/camp/"
@@ -69,11 +188,89 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "theCoderSchool",
+        "official_url": "https://www.thecoderschool.com/camps/digiart/",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.thecoderschool.com/camps/digiart/"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "theCoderSchool",
       "status": "OK",
       "url": "https://www.thecoderschool.com/camps/digiart/"
+    },
+    "happy_childhood_education": {
+      "categories": [
+        "language",
+        "writing_reading",
+        "stem",
+        "music",
+        "arts",
+        "sports",
+        "after_school",
+        "camps"
+      ],
+      "city": "San Jose",
+      "error": null,
+      "http_status": 200,
+      "items_found": 2,
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [
+          "zh",
+          "en"
+        ],
+        "locations": [
+          "San Jose, CA"
+        ],
+        "name": "快乐童年 / Happy Childhood Education Center",
+        "official_url": "https://www.happychildhoodedu.com/",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "organization",
+            "status": "OK",
+            "url": "https://www.happychildhoodedu.com/"
+          },
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.happychildhoodedu.com/cn/summer.html"
+          }
+        ],
+        "source_type": "education_provider",
+        "topics": [
+          "Chinese language",
+          "English",
+          "Math",
+          "Music",
+          "Art",
+          "Martial arts",
+          "Python",
+          "After-school",
+          "Seasonal camps"
+        ],
+        "verification_status": "VERIFIED"
+      },
+      "provider": "快乐童年 / Happy Childhood Education Center",
+      "status": "OK",
+      "url": "https://www.happychildhoodedu.com/"
     },
     "hidden-villa-summer-camp": {
       "categories": [
@@ -84,11 +281,90 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "Hidden Villa",
+        "official_url": "https://www.hiddenvilla.org/programs/summer-camps/",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.hiddenvilla.org/programs/summer-camps/"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "Hidden Villa",
       "status": "OK",
       "url": "https://www.hiddenvilla.org/programs/summer-camps/"
+    },
+    "loving_tree_academy": {
+      "categories": [
+        "language",
+        "after_school",
+        "stem",
+        "arts",
+        "camps"
+      ],
+      "city": "Multiple campuses",
+      "error": null,
+      "http_status": 200,
+      "items_found": 4,
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [
+          "zh",
+          "en"
+        ],
+        "locations": [
+          "Milpitas, CA",
+          "Fremont, CA",
+          "Newark, CA",
+          "Pleasanton, CA"
+        ],
+        "name": "春雨学院 / Loving Tree Academy",
+        "official_url": "https://www.lovingtreeacademy.com/",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "organization",
+            "status": "OK",
+            "url": "https://www.lovingtreeacademy.com/"
+          },
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.lovingtreeacademy.com/blog"
+          },
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.lovingtreeacademy.com/projects"
+          }
+        ],
+        "source_type": "education_provider",
+        "topics": [
+          "Chinese language",
+          "After-school",
+          "Academic enrichment",
+          "Seasonal camps"
+        ],
+        "verification_status": "VERIFIED"
+      },
+      "provider": "春雨学院 / Loving Tree Academy",
+      "status": "OK",
+      "url": "https://www.lovingtreeacademy.com/"
     },
     "milpitas-recreation": {
       "categories": [
@@ -101,11 +377,85 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "City of Milpitas Recreation & Community Services",
+        "official_url": "https://www.milpitas.gov/180/Recreation-Community-Services",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.milpitas.gov/180/Recreation-Community-Services"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "City of Milpitas Recreation & Community Services",
       "status": "OK",
       "url": "https://www.milpitas.gov/180/Recreation-Community-Services"
+    },
+    "mygredu": {
+      "categories": [
+        "language",
+        "stem",
+        "writing_reading",
+        "after_school",
+        "arts",
+        "camps"
+      ],
+      "city": "Multiple campuses (Cupertino, Milpitas)",
+      "error": null,
+      "http_status": 200,
+      "items_found": 1,
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [
+          "zh",
+          "en"
+        ],
+        "locations": [
+          "Cupertino, CA",
+          "Milpitas, CA"
+        ],
+        "name": "谷雨中文学校 / MyGREDU",
+        "official_url": "https://www.mygredu.com/",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "organization",
+            "status": "OK",
+            "url": "https://www.mygredu.com/"
+          },
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.mygredu.com/summer-camp"
+          }
+        ],
+        "source_type": "education_provider",
+        "topics": [
+          "Chinese language",
+          "Math",
+          "English",
+          "After-school",
+          "Enrichment",
+          "Seasonal camps"
+        ],
+        "verification_status": "VERIFIED"
+      },
+      "provider": "谷雨中文学校 / MyGREDU",
+      "status": "OK",
+      "url": "https://www.mygredu.com/"
     },
     "openspace-kids": {
       "categories": [
@@ -115,8 +465,26 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "Midpeninsula Regional Open Space District",
+        "official_url": "https://www.openspace.org/where-to-go/kids-education",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.openspace.org/where-to-go/kids-education"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "Midpeninsula Regional Open Space District",
       "status": "OK",
       "url": "https://www.openspace.org/where-to-go/kids-education"
@@ -130,11 +498,134 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "Peninsula Youth Theatre",
+        "official_url": "https://www.pytnet.org/programs",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.pytnet.org/programs"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "Peninsula Youth Theatre",
       "status": "OK",
       "url": "https://www.pytnet.org/programs"
+    },
+    "ranchen_bay_area_weekend": {
+      "categories": [
+        "outdoor",
+        "arts",
+        "music",
+        "family_events"
+      ],
+      "city": "San Francisco Bay Area",
+      "error": null,
+      "http_status": 200,
+      "items_found": 594,
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [
+          "San Francisco Bay Area",
+          "San Francisco",
+          "Peninsula",
+          "South Bay",
+          "East Bay",
+          "North Bay"
+        ],
+        "language": [
+          "zh"
+        ],
+        "locations": [],
+        "name": "湾区亲子活动 / Ran Chen Weekend Activities",
+        "official_url": "https://ranchen.org/weekend",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://ranchen.org/weekend"
+          }
+        ],
+        "source_type": "community_activity_aggregator",
+        "topics": [
+          "Nature and animals",
+          "Music and arts",
+          "Festivals and markets",
+          "Exploration and experiences",
+          "Family activities",
+          "Children's workshops"
+        ],
+        "verification_status": "VERIFIED"
+      },
+      "provider": "湾区亲子活动 / Ran Chen Weekend Activities",
+      "status": "OK",
+      "url": "https://ranchen.org/weekend"
+    },
+    "red_shoes_dance_studio": {
+      "categories": [
+        "dance_performing"
+      ],
+      "city": "Newark",
+      "error": null,
+      "http_status": 200,
+      "items_found": 6,
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [
+          "zh",
+          "en"
+        ],
+        "locations": [
+          "Newark, CA"
+        ],
+        "name": "红舞鞋舞校 / Red Shoes Dance Studio",
+        "official_url": "https://hongwuxie887.wixsite.com/redshoes",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "organization",
+            "status": "OK",
+            "url": "https://hongwuxie887.wixsite.com/redshoes"
+          },
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://hongwuxie887.wixsite.com/redshoes/about"
+          },
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "organization",
+            "status": "OK",
+            "url": "https://hongwuxie887.wixsite.com/redshoes/contact"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [
+          "Children's dance",
+          "Chinese dance",
+          "Creative movement",
+          "Latin dance"
+        ],
+        "verification_status": "VERIFIED"
+      },
+      "provider": "红舞鞋舞校 / Red Shoes Dance Studio",
+      "status": "OK",
+      "url": "https://hongwuxie887.wixsite.com/redshoes"
     },
     "sjys-camps": {
       "categories": [
@@ -145,8 +636,26 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "San Jose Youth Symphony",
+        "official_url": "https://sjys.org/camp/",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://sjys.org/camp/"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "San Jose Youth Symphony",
       "status": "OK",
       "url": "https://sjys.org/camp/"
@@ -160,8 +669,26 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "TechKnowHow",
+        "official_url": "https://www.techknowhowkids.com/lego-robotics",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.techknowhowkids.com/lego-robotics"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "TechKnowHow",
       "status": "OK",
       "url": "https://www.techknowhowkids.com/lego-robotics"
@@ -175,8 +702,26 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "TechKnowHow",
+        "official_url": "https://www.techknowhowkids.com/winter-camps",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.techknowhowkids.com/winter-camps"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "TechKnowHow",
       "status": "OK",
       "url": "https://www.techknowhowkids.com/winter-camps"
@@ -190,8 +735,26 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "Western Ballet",
+        "official_url": "https://westernballet.org/summercamp/",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://westernballet.org/summercamp/"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "Western Ballet",
       "status": "OK",
       "url": "https://westernballet.org/summercamp/"
@@ -204,8 +767,26 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "Western Ballet",
+        "official_url": "https://westernballet.org/summersaturdayclasses/",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://westernballet.org/summersaturdayclasses/"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "Western Ballet",
       "status": "OK",
       "url": "https://westernballet.org/summersaturdayclasses/"
@@ -218,8 +799,26 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "YMCA of Silicon Valley",
+        "official_url": "https://www.ymcasv.org/child-care-camps/holiday-camps",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.ymcasv.org/child-care-camps/holiday-camps"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "YMCA of Silicon Valley",
       "status": "OK",
       "url": "https://www.ymcasv.org/child-care-camps/holiday-camps"
@@ -234,8 +833,26 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "YMCA of Silicon Valley",
+        "official_url": "https://www.ymcasv.org/child-care-camps/summer-day-camps",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.ymcasv.org/child-care-camps/summer-day-camps"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "YMCA of Silicon Valley",
       "status": "OK",
       "url": "https://www.ymcasv.org/child-care-camps/summer-day-camps"
@@ -248,8 +865,26 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "YMCA of Silicon Valley",
+        "official_url": "https://www.ymcasv.org/swimming/swim-lessons",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.ymcasv.org/swimming/swim-lessons"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "YMCA of Silicon Valley",
       "status": "OK",
       "url": "https://www.ymcasv.org/swimming/swim-lessons"
@@ -262,8 +897,26 @@
       "error": null,
       "http_status": 200,
       "items_found": 1,
-      "last_attempted_at": "2026-11-15T17:27:10Z",
-      "last_success_at": "2026-11-15T17:27:10Z",
+      "last_attempted_at": "2026-11-16T04:29:53Z",
+      "last_success_at": "2026-11-16T04:29:53Z",
+      "organization": {
+        "geographic_scope": [],
+        "language": [],
+        "locations": [],
+        "name": "YMCA of Silicon Valley",
+        "official_url": "https://www.ymcasv.org/family-programs-sports/youth-sports",
+        "pages": [
+          {
+            "last_verified": "2026-11-16T04:29:53Z",
+            "role": "activities",
+            "status": "OK",
+            "url": "https://www.ymcasv.org/family-programs-sports/youth-sports"
+          }
+        ],
+        "source_type": "activity_provider",
+        "topics": [],
+        "verification_status": "VERIFIED"
+      },
       "provider": "YMCA of Silicon Valley",
       "status": "OK",
       "url": "https://www.ymcasv.org/family-programs-sports/youth-sports"
