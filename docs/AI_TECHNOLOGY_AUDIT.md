@@ -2,290 +2,229 @@
 
 | | |
 |---|---|
-| Audited commit | `8eb961d` (branch `main`, clean working tree) |
-| Audit date | 2026-11-15 |
-| Scope | All 46 tracked files outside `tests/fixtures/` (37 fixture files checked only as test inputs). `.venv/`, `node_modules/`, caches and build output excluded. |
-| Method | Static reading of the source, repo-wide searches for provider SDKs, model names, prompts, vector/agent libraries and key patterns, a list of installed packages, the existing offline test suite, and a read-only look at the GitHub repository description. No model API was called and nothing was installed. |
-| Secrets | A pattern search for API keys, tokens and private keys found **none** in tracked files. The only credential reference is the built-in `secrets.GITHUB_TOKEN` used for the GHCR login in `.github/workflows/docker-build.yml:31`. |
-
----
+| Audited state | Commit `6ba91c9` ("Add Real AI Agent", branch `main`), 2026-11-16. The application code in the working tree is identical to that commit; only this document differs. |
+| Added in `6ba91c9` (since `8eb961d`) | `activity_tracker/agent.py`, `frontend/src/Assistant.js`, `tests/test_agent.py`, `docs/AI_AGENT_MVP.md` (new); `backend/app.py`, `activity_tracker/recommend.py`, `frontend/src/App.js`, `docker-compose.yml`, `README.md` (modified) |
+| Method | Read the source at the line numbers cited; repo-wide searches for model providers, prompts, vector and agent libraries; list of installed packages; full test suite plus repeated live-model tests; one manual Docker check (Section 8). No cloud model was called. |
+| Secrets | None in tracked or new files. The agent uses no API keys. The only credential reference is the built-in `secrets.GITHUB_TOKEN` for the GHCR login (`.github/workflows/docker-build.yml:31`). |
 
 ## 1. Executive summary
 
-**The project contains no generative AI, no machine-learning model and no AI agent.** It is a
-well-tested, deterministic, rule-based web-data pipeline:
+The project now contains **one real, local LLM integration: an optional AI Assistant with
+model-driven tool calling**. A `qwen2.5:1.5b` model served by Ollama on the user's Mac reads a question,
+chooses among four Python tools, receives their results, and writes an answer. The loop and its safety checks
+are in `activity_tracker/agent.py`. It is exposed as `POST /agent/chat` and as a panel in the React viewer.
 
-> polite HTTP fetching → HTML / JSON-LD / Next.js-payload parsing with BeautifulSoup and regular expressions →
-> rule-based field extraction (ages, dates, prices, schedules in English and Chinese) → ID assignment and
-> field-by-field change detection → rule-based filtering ("recommendations") → Markdown report, Flask API and
-> React viewer.
+Everything else is unchanged and **not** AI:
+- discovery (fetching and parsing);
+- rule-based extraction of ages, dates and prices;
+- change tracking;
+- the Markdown report;
+- the GitHub Actions workflows.
 
-- **LLM integration: NOT_FOUND.** No provider SDK is in `requirements*.txt`, `package.json` or the installed
-  virtual environment. No code calls a model endpoint. The only outbound HTTP code is the page fetcher
-  (`activity_tracker/fetcher.py:76,96`) and the frontend's call to its own backend (`frontend/src/App.js:55`).
-- **Prompts, embeddings, vector search, RAG, agents: NOT_FOUND.**
-- **The only "AI-adjacent" technology is OCR** (system Tesseract, a classical OCR engine with an LSTM text
-  recognizer bundled inside the binary). It is implemented and tested with a stub, but **no configured source
-  uses it**, Tesseract is not installed in CI or the Docker image, and 0 of the 637 stored records came from OCR.
-- **Everything else that looks intelligent is rules**: regex extraction, a hand-written bilingual glossary
-  (29 concepts), a Traditional→Simplified character table, character-count language detection, and
-  date/age/title rules for what to recommend.
+The assistant is off unless `AI_ENABLED=true`, only reads `data/courses.json`, and is never called by
+discovery, the CLI, reports or workflows.
 
-**AI maturity: Level 0 (no AI in operation).** The engineering quality of the non-AI parts is high: 202 offline
-tests, explicit "never guess" rules, provenance on every field. The repository's **name, GitHub description and
-topics** ("AIAgentClassSelect", "AI-powered course selection agent", topics `ai`, `agent`) and one design
-document (`doc/worflowchinese.md`, "调用 GPT API") describe AI capabilities that do not exist in the code.
-The README body itself is accurate about this ("no paid API and no secrets", "None are generated today").
+| Capability | Status |
+|---|---|
+| Local LLM inference (Ollama, `qwen2.5:1.5b`) | Implemented, **tested with real local inference** |
+| Model-driven tool selection and execution loop | Implemented, **tested with real local inference** |
+| Prompting (system prompt, tool schemas, native tool calls) | Implemented and used |
+| Conversation memory, RAG, embeddings, vector search, multi-agent, cloud AI | **Not implemented** |
+| OCR (Tesseract) | Implemented, not used by any configured source (unchanged) |
+| Extraction, search, recommendations, change detection | Rule-based, not AI (unchanged) |
 
----
+**Maturity:** a working single-agent MVP on a small local model. The tools and data are grounded; the free-text
+answer is only as reliable as a 1.5B model (Section 7).
 
 ## 2. AI technology inventory
 
-| # | Technology | Classification | Evidence | Operational status |
-|---|---|---|---|---|
-| A1 | OpenAI / GPT | NOT_FOUND | No `openai` package, import, endpoint, model name or `OPENAI_*` variable in code. The only occurrence is a guard asserting its absence: `tests/test_workflow.py:30`. Mentioned in prose only in `doc/worflowchinese.md:7,18,71`. | Not present |
-| A2 | Anthropic / Claude | NOT_FOUND | No package, import or endpoint | Not present |
-| A3 | Google Gemini | NOT_FOUND | No package, import or endpoint | Not present |
-| A4 | Ollama / local LLM | NOT_FOUND | No package, import or `localhost:11434`-style call | Not present |
-| A5 | Hugging Face Transformers / Inference API | NOT_FOUND | No `transformers`, `huggingface_hub` or `torch` | Not present |
-| A6 | Other providers (Mistral, Cohere, …) | NOT_FOUND | No package, import or endpoint | Not present |
-| B | Prompts, templates, few-shot, JSON mode, tool calling | NOT_FOUND | No prompt strings and no message/role structures. Repo-wide search for `prompt` in code: 0 hits. | Not present |
-| C | Embeddings / semantic similarity | NOT_FOUND | No embedding model, vectors or cosine similarity. Similarity is exact field comparison: `search.py:91-112`. | Not present |
-| D | Vector database (FAISS, Chroma, Pinecone, Qdrant, pgvector, …) | NOT_FOUND | Storage is JSON files: `tracker.py:71-99` (`Store`) | Not present |
-| E | RAG pipeline | NOT_FOUND | None of the retrieve → construct context → generate steps exist | Not present |
-| F1 | Agent framework (LangChain, LangGraph, LlamaIndex, CrewAI, AutoGen, Agents SDK) | NOT_FOUND | No package or import | Not present |
-| F2 | Custom agent (model-driven tool selection or loop) | NOT_FOUND | `cli.py:23-136` `run_discovery` is a fixed, configuration-driven loop over sources; no model decides anything | Not present |
-| G1 | OCR (Tesseract via subprocess) | IMPLEMENTED_BUT_NOT_USED | `ocr.py:27-39` `ocr_image`; called from `extract.py:744-761` `extract_poster` when `parser == "poster"` (`extract.py:767-768`) | Code path works, verified with a stub. **No source in `config/sources.json` uses `poster`**, Tesseract isn't installed in CI or Docker, and 0 of 637 records came from OCR. |
-| G2 | Rule-based information extraction (regex, EN + ZH) | IMPLEMENTED_AND_USED | `extract.py:29-110` patterns; `parse_age` :182, `find_price` :203, `find_dates` :243, `find_schedule` :269, `find_enrollment` :275 | Runs on every discovery run |
-| G3 | Rule-based language / script detection | IMPLEMENTED_AND_USED | `i18n.py:40-55` `detect_language` (character counts, no model) | Runs on every record |
-| G4 | Dictionary-based script conversion and bilingual synonyms | IMPLEMENTED_AND_USED | `i18n.py:36-37` `to_simplified` (character table); `search.py:15-31` `Glossary`, with 29 concepts in `config/settings.json` | Used by search and duplicate linking |
-| G5 | Keyword search with simple scoring | IMPLEMENTED_AND_USED | `search.py:55-79` (AND match; title hits score higher) | `GET /courses?q=` (`backend/app.py:46-50`) |
-| G6 | Rule-based "recommendation" filter | IMPLEMENTED_AND_USED | `recommend.py:55-77` lifecycle, `:80-96` age_fit, `:134-144` audience, `:147-155` not_recommended_reason | Report (`report.py:162-167`) and API (`backend/app.py:43-45`) |
-| G7 | Change detection (diff) | IMPLEMENTED_AND_USED | `tracker.py:64-68` `diff_fields`; `:131-182` `merge_source` | Every run |
-| G8 | Machine translation | CONFIGURED_BUT_NOT_IMPLEMENTED | The label `"machine"` exists (`i18n.py:7,14`; `App.js:10`), but no code generates translations. The README says "None are generated today" (`README.md:70`). Stored data has 0 translations of any method. | Display label only |
-| G9 | ML models, classifiers, NER, ranking models, NLP libraries (spaCy, NLTK, jieba, scikit-learn, …) | NOT_FOUND | None installed or imported | Not present |
-
-No technology is classified DEPENDENCY_ONLY: **no AI-related package is declared or installed at all.**
-The installed environment contains only beautifulsoup4, requests, Flask, flask-cors, pytest, PyYAML and their
-transitive dependencies. The frontend depends only on react, react-dom and react-scripts.
-
----
-
-## 3. LLM and model integration
-
-**No LLM integration exists.**
-
-| Check | Result |
-|---|---|
-| SDK dependencies | None. `requirements.txt` has `requests` and `beautifulsoup4`; `requirements-dev.txt` adds `pytest`, `PyYAML`, `flask` and `flask-cors`; `frontend/package.json` has `react`, `react-dom` and `react-scripts`. |
-| HTTP calls to model APIs | None. All Python HTTP goes through `Fetcher.get` (`fetcher.py:86-109`) to the configured provider pages and their `robots.txt` (`fetcher.py:69-84`). The frontend only calls `/courses` (`App.js:55`). |
-| Model initialization or configuration | None. `config/settings.json` has no model, endpoint or key fields. |
-| API key handling | None. The code reads only `COURSES_FILE`, `SETTINGS_FILE` and `TODAY` (`backend/app.py:16,17,41`). |
-| Inference execution | None |
-| Error handling / fallback for models | Not applicable. The existing fallbacks are for fetching (`merge_source` keeps data when a source fails, `tracker.py:143-148`), OCR (`OCRUnavailable`, `ocr.py:15,30,33,38`) and time zone (`recommend.py:37-39`). |
-
-The test suite actively guards against an AI dependency entering discovery:
-`tests/test_workflow.py:25-30` asserts the discovery workflow contains no `secrets.` and no `OPENAI`.
-
-**Execution path for any AI claim:** none can be traced. There is no model invocation anywhere between an entry
-point (`python -m activity_tracker` → `cli.py:152` `main`, `GET /courses` → `backend/app.py:27`, or the React app)
-and its output.
-
----
-
-## 4. Prompt engineering
-
-**NOT_FOUND.** There are no system prompts, user prompts, templates, few-shot examples, JSON-mode or
-structured-output schemas, or tool/function definitions. The only "prompt-like" texts are:
-
-- UI placeholder strings for the search box (`frontend/src/App.js:6,13,20`), which are shown to people, not models.
-- `doc/worflowchinese.md`, which describes a planned "AI 智能处理 → 调用 GPT API" step but contains no prompt
-  and has no corresponding code.
-
----
-
-## 5. Embeddings, vector search and RAG
-
-### What exists (non-AI)
-
-| RAG-like step | What the project does instead | Evidence |
+| Technology | Classification | Evidence |
 |---|---|---|
-| 1. Data ingestion | Fetches configured official pages (robots.txt, per-host delay, retries) | `fetcher.py:48-109`, `cli.py:55` |
-| 2. Document parsing | BeautifulSoup HTML, JSON-LD, Next.js flight payload, CSS-selector listings | `extract.py:413-780` |
-| 3. Chunking | Not done. Records are extracted as structured fields, not text chunks. | — |
-| 4. Embedding generation | **NOT_FOUND** | — |
-| 5. Vector storage | **NOT_FOUND.** Structured JSON in `data/courses.json` | `tracker.py:71-99` |
-| 6. Retrieval | Keyword/glossary match with AND semantics and title-weighted integer score | `search.py:55-79` |
-| 7. Context construction | **NOT_FOUND** | — |
-| 8. LLM generation | **NOT_FOUND** | — |
-| 9. Source attribution | Present, but for extracted data, not generated text: every record keeps `source_url`, `detail_url` and an `extraction` method, and the report links each row to the official page | `extract.py:353-365` `_base_record`; `report.py:33-38` `link` |
+| Ollama (local LLM server) via plain HTTP | IMPLEMENTED_AND_USED (when `AI_ENABLED=true`) | `agent.py:116-163` `OllamaClient`: `GET /api/tags` model check (:132), `POST /api/chat` with tools and `temperature: 0` (:146-163). HTTP is `requests`, an existing dependency; no AI SDK is installed. |
+| Qwen 2.5 1.5B (`qwen2.5:1.5b`, Q4_K_M) | IMPLEMENTED_AND_USED | Default model `agent.py:27`; Compose default `docker-compose.yml:17`. The local Ollama 0.40.11 lists it, with `tools` among its capabilities. |
+| Tool / function calling (Ollama native `tool_calls`) | IMPLEMENTED_AND_USED | Tool schemas `agent.py:65-85`; loop `agent.py:367-404` |
+| Custom single agent (no framework) | IMPLEMENTED_AND_USED | `run_agent` `agent.py:367-404`; dispatch `agent.py:326-349` |
+| System prompt and prompt construction | IMPLEMENTED_AND_USED | `SYSTEM_PROMPT` `agent.py:48-61` (today's date and category keys filled in at :369-370); nudge `agent.py:62` |
+| OpenAI, Anthropic, Gemini, Hugging Face, other cloud providers | NOT_FOUND | No package or import. `AI_PROVIDER` values other than `ollama` are refused (`agent.py:419-421`). |
+| LangChain, LangGraph, LlamaIndex, CrewAI, AutoGen, Agents SDK | NOT_FOUND | No package or import |
+| Embeddings, vector database, semantic search | NOT_FOUND | Search is the existing glossary/keyword search (`search.py:55-79`) |
+| RAG | NOT_FOUND | No document chunking, embedding or retrieval-to-context step. Tools return structured records. |
+| Conversation memory | NOT_FOUND | Each request starts a new message list (`agent.py:369-371`); no history is stored |
+| Multi-agent orchestration | NOT_FOUND | One model, one loop |
+| OCR (Tesseract via subprocess) | IMPLEMENTED_BUT_NOT_USED | `ocr.py:27-39`; no configured source uses `parser: "poster"` (unchanged) |
+| Rule-based extraction, language detection, glossary search, recommendation filters, change detection | IMPLEMENTED_AND_USED (not AI) | Section 6 |
+| Machine translation | CONFIGURED_BUT_NOT_IMPLEMENTED | Label only (`i18n.py:7,14`); none generated (unchanged) |
 
-### Cross-language matching is not semantic search
+## 3. LLM integration and execution path
 
-"机器人" finds "robotics" because both are listed as terms of the same glossary concept in
-`config/settings.json`, segmented longest-first (`search.py:15-31`). A query word that is not in the glossary
-is matched literally (`search.py:76`). Synonyms outside the glossary ("droid", "STEAM lab") will not match.
-This is curated dictionary lookup, not semantic search.
+**Configuration** comes only from the environment (`AgentSettings.from_env`, `agent.py:97-113`):
 
-**Conclusion:** steps 1, 2, 6 and 9 exist in a non-AI form. Steps 3, 4, 5, 7 and 8 do not exist. **There is no
-RAG pipeline, no embedding and no vector search.**
-
----
-
-## 6. Agent architecture
-
-**No AI agent exists.**
-
-| Agent property | Present? | Evidence |
+| Variable | Default | Notes |
 |---|---|---|
-| Model-driven decisions or tool selection | No | No model is present (Section 3) |
-| Tool execution chosen at run time | No | `cli.py:23-136` iterates `config.sources` in order and calls a parser chosen by each source's configured `parser` field (`extract.py:764-780`) |
-| Planning or multi-step reasoning | No | Fixed pipeline: fetch → extract → geo-filter → assign IDs → merge → link duplicates → annotate → save (`cli.py:55-132`) |
-| Memory and state | Persistent *data* state only (`data/*.json`), not agent memory | `tracker.py:71-99` |
-| Agent loop with termination conditions | No. The loop ends when the configured source list ends. | `cli.py` |
-| Autonomous task selection | No. Discovery mode only *suggests* links that match configured keywords, for human review. | `discovery.py:1-5,26-50` |
+| `AI_ENABLED` | off | `true` turns the assistant on |
+| `AI_PROVIDER` | `ollama` | Only accepted value |
+| `AI_MODEL` | `qwen2.5:1.5b` | |
+| `AI_BASE_URL` | `http://localhost:11434` | Must be `http(s)`; otherwise the request is refused with an error (`agent.py:119-121`) |
+| `AI_TIMEOUT` | 120 s | |
+| `AI_MAX_ITERATIONS` | 5 | |
 
-The closest thing to autonomy is `discover_new_sources` mode: `find_candidates` (`discovery.py:26-50`) scans
-anchors on known pages with configured keyword regexes and writes suggestions to
-`data/candidate_sources.json`. It never adds a source by itself. This is deliberate, conservative design, but
-it is keyword matching, not an agent.
+**Execution path:**
 
-The word "Agent" appears only in the repository name, the GitHub description and topics, and the HTTP
-`User-Agent` header (`fetcher.py:56`).
+```
+React panel  frontend/src/Assistant.js:45 fetch("/agent/chat")      (mounted at frontend/src/App.js:80)
+ → Flask     backend/app.py:72-85 agent_chat
+             load_courses (app.py:28-37): same list as GET /courses (no past, adult or duplicate records)
+ → agent     handle_chat (agent.py:407-428): validates message (≤500 chars), AI_ENABLED, provider;
+             OllamaClient.check_model → GET /api/tags
+ → loop      run_agent (agent.py:367-404), at most AI_MAX_ITERATIONS model calls:
+               POST /api/chat {messages, tools, temperature 0}
+               tool_calls → ActivityTools.execute (agent.py:326-349): fixed dispatch table, validate (:277-324),
+                            run tool, result appended as a "tool" message
+               text       → clean_answer (agent.py:360-364) → final response
+ → response  {answer, activities, tools_used, agent_status, model, error}; activities formatted by
+             course_item (app.py:40-43), the same shape as GET /courses
+```
 
----
+**Error handling:**
+- Server unreachable, model not installed, timeout, non-200 response and malformed replies all raise
+  `OllamaError` (`agent.py:125-163`).
+- These return HTTP 503 with `agent_status: "unavailable"` and a specific message (`agent.py:426-427`).
+- There is **no cloud fallback**.
 
-## 7. Traditional NLP, OCR and rule-based processing
+**Docker:** `docker-compose.yml:12-20` points the backend at the host's Ollama via
+`http://host.docker.internal:11434`, with `extra_hosts: host-gateway`. No Ollama runs inside Docker.
 
-These are the project's real "intelligent" capabilities. None of them is generative AI or machine learning.
+## 4. Prompts and tools
 
-| Capability | Technique | Evidence | Strengths | Limits |
-|---|---|---|---|---|
-| Age extraction | Regex for EN ("ages 7-9", "Grades K-2") and ZH ("7-9岁", "一至三年级", "8岁及以上"); grade→age table; refuses ambiguous multi-statement notes | `extract.py:45-53,153-200,696-716` | Never guesses; handles full-width text and Chinese numerals | Phrasings outside the patterns are missed (age stays "Not published") |
-| Price | Regex for $, 美元/元, units (/week, /周); skips deposits, fees and discounts | `extract.py:55-64,203-220` | Explicit skip list | First matching price only; no currency normalization |
-| Dates / schedule | Regex for EN/ZH ranges, numeric and Y-M-D dates; year hint from the page | `extract.py:66-84,243-273` | A single date or one without a year is not guessed | Free-form phrasing ("every other Saturday") not interpreted |
-| Enrollment / season | Pattern lists | `extract.py:85-108,275-290` | Bilingual | Fixed vocabulary |
-| City / region | Alias table plus Bay Area terms | `extract.py:292-302,719-741` | Chinese city names (圣何塞 → San Jose) | Only cities in the table |
-| Language detection | Count of CJK vs Latin characters; Simplified/Traditional character sets | `i18n.py:40-55` | Fast, deterministic | Heuristic; short mixed strings may be "mixed" |
-| Script conversion | Character pair table | `i18n.py:19-37` | Search works across scripts | Limited table, not a full converter |
-| Bilingual search | Curated glossary (29 concepts) + literal match, title-weighted score | `search.py:15-79` | Precise and explainable | No fuzzy, typo-tolerant or semantic matching |
-| Cross-language duplicates | Same site + same registration URL, or equal dates/ages + shared glossary concept | `search.py:91-112,140-168` | Conservative (missing fields never match) | Misses pairs with no shared glossary term |
-| Aggregator duplicates | Exact original-URL match to exactly one provider record | `search.py:115-137` | Ambiguous matches are not linked | Exact URLs only |
-| Recommendation filter | Lifecycle from explicit dates in the Bay Area time zone; age-range overlap; adult/child title regex | `recommend.py:31-155` | Transparent reasons ("past", "adult course", "age mismatch") | Filtering only: no ranking, personalization or preference learning |
-| Change detection | Field-by-field normalized comparison with bounded history | `tracker.py:13-14,19-29,64-68,131-182` | Never deletes history; failed sources never downgrade data | Exact-field diff; no semantic "is this meaningfully different" |
-| Source discovery | Keyword regex over links on known pages | `discovery.py:15-50` | Suggestions only | Only the same site; keyword-limited |
-| OCR | System Tesseract (`chi_sim`, `chi_tra`, `eng`, `--psm 6`) via `subprocess`, then the same regex extraction | `ocr.py:19-39`, `extract.py:744-761` | No Python ML dependency; fails loudly when unavailable | **Not used by any configured source;** quality on stylized posters is untested |
+**Prompt:** one system prompt (`agent.py:48-61`) states the rules:
+- call a tool before answering;
+- never invent activities, ages, dates, prices or links;
+- call `filter_by_age` or `filter_by_date` when the user gives an age or dates;
+- answer briefly in the user's language.
 
-Tesseract 4+ uses an LSTM neural network internally, so OCR is the one place a trained model would run. It is
-an external binary, though, not a model the project trains, loads or calls through an AI API. Even this is
-dormant in production today.
+There are no few-shot examples and no JSON-mode output.
 
----
+**Tools** (`agent.py:70-82` schemas, `agent.py:196-275` implementations). All four are read-only and reuse
+existing logic:
+
+| Tool | Reuses | Notes |
+|---|---|---|
+| `search_activities(keyword?, category?, location?)` (`agent.py:223-243`) | `search.search` + `Glossary`, `extract.detect_cities` | Starts a new result set. "Bay Area" or 湾区 is not a city filter (`agent.py:44`). Generic words like "classes" or 课 are dropped (`agent.py:166-170`). An empty multi-filter result asks the model to retry with fewer arguments. |
+| `filter_by_age(age)` (`agent.py:245-255`) | `recommend.age_fit`, `age_fit_note` | Narrows the latest results; reports how many records had no published age |
+| `filter_by_date(start_date, end_date?)` (`agent.py:257-267`) | `recommend.date_span` (new helper, `recommend.py:55-66`, same date parser as the lifecycle rule) | Overlap test; reports how many undated records were left out |
+| `get_activity_details(activity_id)` (`agent.py:269-275`) | — | Published fields, including `detail_url`, `registration_url`, `source_url` and `original_event_url` |
+
+**Guards:**
+- **Unknown tool names are rejected** without execution (`agent.py:333-335`), and arguments are type- and
+  range-checked (`agent.py:277-324`).
+- **Unknown extra arguments** are ignored and listed in the trace.
+- **Limits:** at most 4 tool calls per model step (`agent.py:387,397-401`) and at most 5 model calls per request.
+- **No answer from memory:** a reply given without any tool is nudged once, then flagged `no_tools_used`
+  (`agent.py:378-385`).
+- **Clean answers:** `<think>` blocks are removed, and URLs not present in the activity data are replaced
+  (`agent.py:360-364`).
+- **Small context:** older list results are collapsed to a "superseded" note (`agent.py:392-395`).
+- **No code execution:** no Python, shell or SQL is ever executed from model output.
+
+## 5. Embeddings, vector search, RAG, memory
+
+Not implemented. The assistant's "retrieval" is the existing structured search and filters, invoked as tools.
+Answers are grounded in tool results, but that is tool calling over structured data, not RAG: there is no
+document chunking, embedding, vector store or retrieved-passage context. There is no memory across requests.
+
+## 6. Non-AI processing (unchanged)
+
+| Area | Technique | Evidence |
+|---|---|---|
+| Fetching | `requests`, robots.txt, per-host delay, retries | `fetcher.py:48-109` |
+| Parsing and extraction | BeautifulSoup, JSON-LD, Next.js payload, EN/ZH regex for ages, prices, dates, schedules | `extract.py:29-110,182-290,413-780` |
+| Language and script | Character counts; Traditional→Simplified table | `i18n.py:19-55` |
+| Search | Curated bilingual glossary + literal match, title-weighted score | `search.py:15-79` |
+| Recommendations | Date lifecycle, age overlap, adult-title rules; filtering only, no ranking model | `recommend.py:69-169` |
+| Change detection | Field-by-field normalized diff, bounded history | `tracker.py:64-68,131-182` |
+| OCR | System Tesseract; not used by any configured source | `ocr.py:27-39`, `extract.py:744-761` |
+
+## 7. Grounding and known limitations
+
+**What is grounded:**
+- **Activity cards** are the records from the latest search/filter tool results plus any detail lookups
+  (`ActivityTools.shown`, `agent.py:351-353`).
+- **Links** on the cards are the records' own official URLs.
+- **The trace** (`tools_used`) is the real list of calls with validated arguments and result counts.
+
+**What is not:** the **answer text** is written by a 1.5B-parameter model and **can be inaccurate**. In manual
+runs on 2026-11-16, `qwen2.5:1.5b`:
+- added categories the user didn't ask for, sometimes producing "none found";
+- invented an age the user never gave;
+- once emitted 20 tool calls in a single step (only 4 ran);
+- named an activity from an earlier, unfiltered result while answering a date question.
+
+The cards and trace stayed correct in each case; only the prose was wrong.
+
+**Other limitations:**
+- Results vary between runs even at temperature 0.
+- There is no conversation memory.
+- Relative dates ("this weekend") depend on the model's date arithmetic.
+- Search is keyword and glossary based, not semantic.
+- A larger local model was not installed or tested.
+- On Linux hosts, Ollama must listen on an address the container can reach.
 
 ## 8. Test coverage and runtime verification
 
-`python -m pytest -q` at the audited commit: **202 collected, 201 passed, 1 skipped**. The skip is the real-OCR
-test (`tests/test_i18n.py:281`, Tesseract with `chi_sim` not installed on the audit machine). All tests are
-offline.
+**Automated, verified for this update.** `python -m pytest -q` gives **231 passed, 1 skipped**. The skip is
+the pre-existing real-OCR test (no Tesseract). `tests/test_agent.py` collects **30 tests** (19 functions, two
+parametrized):
 
-| Capability | Tested? | How | Evidence |
-|---|---|---|---|
-| Any LLM / embedding / RAG / agent | Not applicable (nothing to test) | No mocked model calls exist either | — |
-| Absence of AI and secrets in discovery | Yes | Asserts no `secrets.` or `OPENAI` in `discover.yml` | `tests/test_workflow.py:25-30` |
-| HTML/JSON-LD/listing/section/aggregator extraction | Yes | Real HTML fixtures (`tests/fixtures/`) | `tests/test_extract.py`, `tests/test_six_sources.py`, `tests/test_runs.py` |
-| EN/ZH age, price, date, schedule rules | Yes | Fixture text and parametrized cases | `tests/test_i18n.py`, `tests/test_six_sources.py`, `tests/test_recommend.py` |
-| OCR pipeline | **Stub only** | `ocr_image` is monkeypatched to return fixture text; the "tesseract missing" path is tested; the real engine test is skipped here | `tests/test_i18n.py:269,281,290,298` |
-| Fetching / robots / retries | Yes, with mocks | `MagicMock` HTTP session (no network) | `tests/test_fetcher.py:1-16` |
-| Search and duplicate linking | Yes | Rule-based expectations | `tests/test_i18n.py`, `tests/test_six_sources.py` |
-| Recommendation filter, time zone, API | Yes | Pinned clock, Flask test client | `tests/test_recommend.py` |
-| Change detection | Yes | Two-run fixture comparisons | `tests/test_tracker.py`, `tests/test_runs.py` |
-| Real OCR on real posters | **Not verified** | — | — |
-| Live-site extraction accuracy | Not verified by tests (by design: offline) | Covered only by manual live runs recorded in `data/` | — |
+| Category | Tests | Model |
+|---|---|---|
+| Implemented and tested (scripted) | Tool executed and result returned; multi-step and same-step calls; 10 invalid/unknown-call cases; ignored arguments; per-step cap; iteration limit; nudge and `no_tools_used`; no matches; Bay Area handling; URL preservation and invented-link removal; `<think>` removal; missing model; disabled, non-Ollama and bad-URL configurations; endpoint shape, `GET /courses` unchanged, data file byte-identical | Fake Ollama HTTP session (runs in CI, no model needed) |
+| Real failure path | `test_ollama_unreachable_gives_a_clear_error` | Real refused connection to `127.0.0.1:9` |
+| **Tested with real local inference** | `test_live_ollama_selects_a_tool_and_answers`; `test_live_ollama_chains_search_and_date_filter` (model must call both `search_activities` and `filter_by_date`) | **Real Ollama 0.40.11 + `qwen2.5:1.5b`**; both skip when unavailable (e.g. in CI) |
 
----
+**Live tests:** both passed in 5 of 5 runs during implementation, and in 3 of 3 more runs for this update
+(about 4.4 s per run, both tests together).
 
-## 9. README and GitHub positioning review
+**Docker (manual check during implementation on 2026-11-16, not repeated for this update):**
+- **Model visible:** the backend container listed `qwen2.5:1.5b` from `http://host.docker.internal:11434`.
+- **Real request:** `POST /agent/chat` returned `ok` in about 6.5 s with a model-selected `search_activities`
+  call and 3 cards with official links.
+- **Frontend proxy:** the same endpoint worked through the frontend proxy on port 3000.
+- **Error messages:** a wrong port and a missing model each returned HTTP 503 with specific messages.
+- **Data untouched:** `data/courses.json` was unchanged afterwards.
 
-### Where AI terminology appears
+**Not verified:**
+- The React panel was compiled ("Compiled successfully!") and its endpoint exercised through the proxy, but
+  it was not clicked through in a browser.
+- Answer-text accuracy has no automated evaluation.
 
-| Location | Text | Code reality | Recommendation |
-|---|---|---|---|
-| Repository name / README title (`README.md:1`) | "AIAgentClassSelect" | No AI and no agent | **KEEP the name** (renaming breaks URLs, GHCR package names and `docker-build.yml` tags), but **REWORD the title line**. See the wording below. |
-| GitHub description | "AI-powered course selection agent with web UI and Docker deployment saas aws" | Not AI-powered; not an agent; no SaaS or AWS code or configuration in the repo | **REWORD** |
-| GitHub topics | `ai`, `agent` | Not supported by code | **REMOVE**. Better-fitting topics: `web-scraping`, `bilingual`, `chinese`, `flask`, `react`, `github-actions` |
-| GitHub topics | `saas`, `aws` | No multi-tenant service and no AWS code or configuration | **REMOVE** (or FUTURE ROADMAP ONLY) |
-| GitHub topics | `dokcer` | Typo | **REWORD** to `docker` |
-| `doc/worflowchinese.md:7,18,28,70-74` | "AI 处理 → GPT API 摘要", "AI 智能处理 / 调用 GPT API", "推荐等级/标签" | No GPT call, no summarization, no rating | **FUTURE ROADMAP ONLY**: mark the file as an early design sketch, or move the GPT step to a "planned" section |
-| `doc/worflowchinese.md:15,26,47` | "每周定时触发 / 定时触发 (cron)" (weekly schedule) | No schedule, and a test forbids one (`tests/test_workflow.py:25-27`) | **REWORD** (not AI, but equally inaccurate) |
-| `doc/classdemo.md` | Hand-written list of "recommended" Bay Area programs for ages 6–7 | Static text; not produced by the code. Its origin cannot be verified from the repo. | **REWORD** with a heading saying it is a manual note, not tool output |
-| `README.md:33` | "There are no ratings or recommendations." | Partly outdated: the report now has rule-based "default recommendations" that hide past, adult and age-mismatched activities (`report.py:162-167`). There are still no ratings. | **REWORD** |
-| `README.md:7` | "no paid API and no secrets" | Accurate | **KEEP** |
-| `README.md:67-70` | "machine translation … None are generated today" | Accurate | **KEEP** |
-| `README.md:80-82` | Glossary-based search | Accurate and appropriately non-AI | **KEEP** |
-| `README.md:86-89` | Optional OCR via tesseract | Accurate | **KEEP**; optionally add "no source uses it yet" |
+## 9. README and GitHub positioning
 
-### Terms checked
+| Item | Current claim | Recommendation |
+|---|---|---|
+| Repo name "AIAgentClassSelect" | AI agent | **KEEP.** A local tool-calling agent now exists. |
+| GitHub description "AI-powered course selection agent … saas aws" | AI-powered, SaaS, AWS | **REWORD**, e.g. "Bay Area kids' activity tracker: rule-based extraction from official pages, change history, bilingual viewer, and an optional local AI assistant (Ollama + tool calling)." No SaaS or AWS code exists. |
+| Topics `ai`, `agent` | | **KEEP** |
+| Topics `saas`, `aws` | | **REMOVE** |
+| Topic `dokcer` | | **REWORD** to `docker` |
+| `README.md` "AI Assistant (optional, local)" section | Local Ollama tools assistant; cards from tool results; off unless enabled | **KEEP.** Accurate. |
+| `README.md:7` | "no schedule, no paid API and no secrets" | **KEEP.** Still true. |
+| `README.md:33` | "There are no ratings or recommendations." | **REWORD.** Rule-based default filtering exists; no ratings. |
+| `doc/worflowchinese.md` | Discovery workflow "调用 GPT API 摘要", weekly cron | **REWORD** or label as an early design. Discovery uses no LLM and has no schedule. |
+| Terms "RAG", "semantic search", "machine learning", "memory", "multi-agent" | Not claimed | **Do not introduce.** Not implemented. |
 
-| Term | Used where? | Supported by code? | Recommendation |
-|---|---|---|---|
-| AI-powered | GitHub description | No | **REMOVE** |
-| AI Agent | Repo name, description, topics | No | **REWORD** the description; **FUTURE ROADMAP ONLY** for actual agent features |
-| LLM / GPT | `doc/worflowchinese.md` | No | **FUTURE ROADMAP ONLY** |
-| RAG | Not used anywhere | No | Don't introduce it |
-| Semantic search | Not used anywhere | No | Don't introduce it; say "bilingual glossary search" |
-| Machine learning | Not used (only "machine translation", correctly marked as not generated) | No | Don't introduce it |
-| AI recommendation | Implied by "AI-powered course selection agent" and "推荐等级" | Recommendations are rule-based filters | **REWORD** as "rule-based filtering by date, age and audience" |
+## 10. Roadmap (updated)
 
-### Suggested replacement wording (evidence-based)
+1. **Done:** LLM natural-language queries over the existing filters, as a local tool-calling assistant.
+2. **Answer accuracy:** evaluate a larger local Qwen behind `AI_MODEL`, and add a small offline evaluation set
+   of prompts with expected tool calls.
+3. **Optional conversation memory** (prior turns in the request) if follow-up questions matter.
+4. **Semantic search, RAG over official pages, multi-agent:** still deferred, for the reasons in the historical
+   audit below. Not needed for the current data size, and RAG would add hallucination and copyright risk.
 
-**GitHub description** (under 350 characters):
+## Historical: audit of commit `8eb961d` (before the AI Assistant)
 
-> Personal tracker for Bay Area kids' classes and camps: fetches official provider pages politely, extracts
-> ages, dates and prices from English and Chinese text with rules, tracks changes over time, and serves a
-> bilingual Flask + React viewer. Manual GitHub Actions runs, no paid APIs.
-
-**README title line:**
-
-> # AIAgentClassSelect — Kids Activity Discovery & Tracking
->
-> *(The name is historical: the tool is rule-based and uses no AI models today. See
-> `docs/AI_TECHNOLOGY_AUDIT.md`.)*
-
-**`README.md:33`:**
-
-> There are no ratings. The report's default list leaves out activities that are past, explicitly for
-> adults, or outside the requested ages (by published values only). Hidden records stay in the history.
-
----
-
-## 10. Recommended AI roadmap
-
-The project's existing principles constrain any AI addition: **never invent activity information, keep
-discovery free of paid APIs and secrets, keep tests offline, and keep children's and parents' data out of
-third-party services.** Each item below is weighed against those. With 637 records, 29 glossary concepts
-and one primary user, the bar for adding AI is high. **Step 0 (free, do first): correct the positioning in
-Section 9.**
-
-| Priority | Item | Benefit | Cost and complexity | Dependencies and risks | Verdict |
-|---|---|---|---|---|---|
-| 1 | **LLM natural-language query → structured filters** ("周六 圣何塞 机器人 适合8岁" → `{category: stem, city: San Jose, age: 8, day: Sat}`) | Real usability gain for a bilingual parent; the model only *parses the question* into the existing filters and never states facts about activities | Low. One structured-output call per query, short input, no activity data sent. Can run on a small hosted model or a local model (Ollama). | Needs an API key (breaks "no secrets" for the viewer, though not for discovery) or a local model runtime. Needs an offline fallback to the current glossary search. Tests must mock the model. | **Worth doing, optional and off by default** |
-| 2 | **AI-assisted recommendations** | Explaining or ranking the already-filtered list ("closest to home, fits Saturdays") | Low to medium | Must stay *on top of* the rule-based filter (`recommend.py`), never override published ages or dates. Personalization needs user preferences, which raises privacy questions. Little gain at this data size. | **Later; only as explanation or ranking of rule-filtered results** |
-| 3 | **Multilingual semantic search (embeddings)** | Catches synonyms outside the glossary | Medium. A multilingual embedding model adds hundreds of MB (and PyTorch) to the backend image, or needs a hosted embeddings API. Index rebuilt per run. A plain array suffices at 637 records; no vector DB needed. | Must keep glossary results first (precision). Harder to explain why something matched. Adding glossary terms is cheaper for now. | **Defer** until glossary maintenance becomes a burden |
-| 4 | **RAG over official provider pages** | Answering detail questions ("is lunch provided?", "what's the refund policy?") with citations | High. Store page text, chunk, embed, retrieve, generate with citations, evaluate faithfulness. | Hallucination risk directly conflicts with "never invent activity information"; it would need strict citation and abstention. Pages change often; storing full page text raises copyright and robots questions. | **Future roadmap only** |
-| 5 | **Tool-calling AI agent** | Autonomous discovery or monitoring | High, with ongoing per-run model cost | Conflicts with design rules: the fixed, polite, robots-respecting pipeline is a feature. An agent choosing what to fetch is harder to bound and audit. A no-registration/purchase rule must remain absolute. | **Not recommended** for this project's goals |
-
-If only one item is pursued, item 1 gives the most user value per unit of cost and risk, provided it ships with
-a deterministic fallback, mocked tests and an explicit opt-in setting.
-
----
-
-## Appendix — Uncertainties and unverified areas
-
-- **Real OCR quality** on actual posters was not tested: Tesseract isn't installed on the audit machine, and no
-  production source uses the poster parser.
-- **GitHub metadata** (description and topics) was read with `gh repo view`. Settings outside the repository
-  (GitHub Apps, external deployments, any AWS account) cannot be audited from the source and were not checked.
-- **`doc/classdemo.md`** may originally have been written with help from an AI chat assistant. The repository
-  can't show that either way. It is static text, not produced or used by the code.
-- **Tesseract's internal LSTM** is part of an external binary. The project neither configures nor trains a model.
-- This audit covers commit `8eb961d`. Uncommitted or other-branch work is not included.
+At `8eb961d`, the project had **no LLM, no prompts, no tool calling and no agent**. No model SDK or model HTTP
+call existed. Only OCR (unused) was model-adjacent, and everything else was the rule-based pipeline in
+Section 6. That audit flagged the repository name, GitHub description and topics, and `doc/worflowchinese.md`
+as overstating AI capabilities. The name and the `ai`/`agent` topics are now supported by the assistant; the
+other findings in Section 9 still apply.
