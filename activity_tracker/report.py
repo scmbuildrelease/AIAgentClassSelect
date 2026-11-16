@@ -3,10 +3,13 @@
 All scraped text is untrusted: cell() escapes Markdown/HTML, link() only links http(s) URLs.
 """
 import re
+from datetime import date
 
 from . import NOT_PUBLISHED
 from .config import AGGREGATOR
 from .i18n import lang_group
+from .recommend import (AGE_GROUP_MATCH, AGE_MATCH_CONFIRMED, AGE_MISMATCH, AGE_UNKNOWN, DATE_UNKNOWN, ONGOING,
+                        PAST, UPCOMING, age_fit, lifecycle, not_recommended_reason)
 from .tracker import NEW, UPDATED, UNCHANGED, NOT_FOUND, FETCH_FAILED
 
 STATUS_ICON = {NEW: "🆕 NEW", UPDATED: "✏️ UPDATED", UNCHANGED: "✅ UNCHANGED",
@@ -36,28 +39,35 @@ def link(text, url) -> str:
 
 
 def age_matches(rec: dict, min_age: int, max_age: int) -> bool:
-    lo, hi = rec.get("age_min"), rec.get("age_max")
-    if lo is None and hi is None:
-        # an aggregator's age group (e.g. preschool 0–5) can rule an event out, never confirm it fits
-        g_lo, g_hi = rec.get("age_group_min"), rec.get("age_group_max")
-        if g_lo is not None and g_hi is not None:
-            return g_lo <= max_age and g_hi >= min_age
-        return True  # unknown ages are shown, flagged as not published
-    return (lo if lo is not None else 0) <= max_age and (hi if hi is not None else 99) >= min_age
+    """Not ruled out by its ages (confirmed, aggregator group only, or unknown)."""
+    return age_fit(rec, min_age, max_age) != AGE_MISMATCH
 
 
-def ages(rec: dict) -> str:
+AGE_FIT_LABELS = {AGE_MATCH_CONFIRMED: "✅", AGE_GROUP_MATCH: "≈", AGE_UNKNOWN: "❓", AGE_MISMATCH: "✖"}
+LIFECYCLE_LABELS = {UPCOMING: "upcoming", ONGOING: "ongoing", PAST: "past", DATE_UNKNOWN: "dates not published"}
+
+
+def ages(rec: dict, ctx: dict | None = None) -> str:
+    """Age text as published, prefixed by how it fits the wanted ages when ctx is given."""
     groups = " " + cell("(listed under: " + "; ".join(rec["age_groups"]) + ")") if rec.get("age_groups") else ""
     if not rec.get("age_text"):
-        return f"_{NOT_PUBLISHED}_" + groups
-    return cell(rec["age_text"]) + (" (grades)" if rec.get("age_basis") == "grade" else "") + groups
+        text = f"_{NOT_PUBLISHED}_" + groups
+    else:
+        text = cell(rec["age_text"]) + (" (grades)" if rec.get("age_basis") == "grade" else "") + groups
+    if ctx is None:
+        return text
+    fit = age_fit(rec, ctx["min_age"], ctx["max_age"])
+    if fit == AGE_GROUP_MATCH:
+        text += " _— event ages not confirmed_"
+    return f"{AGE_FIT_LABELS[fit]} {text}"
 
 
-def dates(rec: dict) -> str:
+def dates(rec: dict, ctx: dict | None = None) -> str:
     s, e = rec.get("start_date"), rec.get("end_date")
-    if not s and not e:
-        return f"_{NOT_PUBLISHED}_"
-    return cell(s if s == e or not e else f"{s} → {e}")
+    text = f"_{NOT_PUBLISHED}_" if not s and not e else cell(s if s == e or not e else f"{s} → {e}")
+    if ctx is None:
+        return text
+    return f"{text} ({LIFECYCLE_LABELS[lifecycle(rec, ctx['today'])]})"
 
 
 def activity_cell(rec: dict) -> str:
@@ -83,14 +93,16 @@ def category_labels(rec: dict, categories: dict) -> str:
                      for c in rec.get("categories", []))
 
 
-def activity_table(recs: list[dict], categories: dict, max_rows: int, with_status=False) -> list[str]:
+def activity_table(recs: list[dict], categories: dict, max_rows: int, with_status=False,
+                   ctx: dict | None = None) -> list[str]:
     head = ["Activity", "Provider", "Category", "Ages", "Dates", "Schedule", "Price", "Enrollment", "Location"]
     if with_status:
         head.insert(0, "Status")
     lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
     for r in recs[:max_rows]:
         row = [activity_cell(r), link(r.get("provider"), r.get("source_url")), cell(category_labels(r, categories)),
-               ages(r), dates(r), cell(r.get("schedule")), cell(r.get("price")), cell(r.get("enrollment_status")),
+               ages(r, ctx), dates(r, ctx), cell(r.get("schedule")), cell(r.get("price")),
+               cell(r.get("enrollment_status")),
                cell(r.get("location"), 80)]
         if with_status:
             row.insert(0, STATUS_ICON.get(r.get("status"), r.get("status", "")))
@@ -147,8 +159,17 @@ def build_report(run: dict, config, max_rows: int | None = None) -> str:
 
     # cross-language duplicates are shown once, under the primary record (see search.link_language_variants)
     in_scope = [r for r in store.values() if selected & set(r.get("categories", [])) and not r.get("duplicate_of")]
-    shown = sorted((r for r in in_scope if age_matches(r, p["min_age"], p["max_age"])), key=_sort_key)
-    outside_age = len(in_scope) - len(shown)
+    today = date.fromisoformat(run.get("today") or run["run_at"][:10])
+    ctx = {"min_age": p["min_age"], "max_age": p["max_age"], "today": today}
+    # default recommendations: not past, not an adult course, not ruled out by published ages.
+    # Hidden records stay in data/courses.json (history is never deleted).
+    reasons = {r["id"]: not_recommended_reason(r, p["min_age"], p["max_age"], today) for r in in_scope}
+    shown = sorted((r for r in in_scope if reasons[r["id"]] is None), key=_sort_key)
+    outside_age = sum(1 for v in reasons.values() if v == "age mismatch")
+    hidden = sorted((r for r in in_scope if reasons[r["id"]] in ("past", "adult course")), key=_sort_key)
+    fits = {f: sum(1 for r in shown if age_fit(r, p["min_age"], p["max_age"]) == f)
+            for f in (AGE_MATCH_CONFIRMED, AGE_GROUP_MATCH, AGE_UNKNOWN)}
+    stages = {s: sum(1 for r in shown if lifecycle(r, today) == s) for s in (UPCOMING, ONGOING, DATE_UNKNOWN)}
     checked = [r for r in shown if r["source_id"] in processed]
     by_status = {s: [r for r in checked if r.get("status") == s] for s in STATUS_ICON}
     changes = {e["id"]: e.get("changes", []) for e in run["events"] if e["status"] == UPDATED}
@@ -179,6 +200,14 @@ def build_report(run: dict, config, max_rows: int | None = None) -> str:
         f"_Ages filter: activities with no published age are included and labelled \"{NOT_PUBLISHED}\"; "
         f"{outside_age} tracked activities fall outside {p['min_age']}–{p['max_age']} and are hidden._",
         "",
+        f"**Age fit of the {len(shown)} activities shown:** ✅ {fits[AGE_MATCH_CONFIRMED]} published ages include "
+        f"{p['min_age']}–{p['max_age']} · ≈ {fits[AGE_GROUP_MATCH]} only listed under an aggregator's broad age group "
+        f"(event ages not confirmed) · ❓ {fits[AGE_UNKNOWN]} ages not published. "
+        f"**Dates:** {stages[UPCOMING]} upcoming · {stages[ONGOING]} ongoing · {stages[DATE_UNKNOWN]} dates not "
+        f"published. **Hidden (kept in history):** "
+        f"{sum(1 for v in reasons.values() if v == 'past')} past · "
+        f"{sum(1 for v in reasons.values() if v == 'adult course')} adult courses.",
+        "",
         "**How to read this:** all values are copied from the official pages linked. "
         f"\"{NOT_PUBLISHED}\" means the page did not state it. "
         "Rows marked **†** are program-level records whose fields were found by text patterns on the page — "
@@ -188,7 +217,7 @@ def build_report(run: dict, config, max_rows: int | None = None) -> str:
 
     if p["mode"] != "discover_new_sources":
         out += [f"## 🆕 New activities ({len(by_status[NEW])})", ""]
-        out += activity_table(by_status[NEW], categories, max_rows) if by_status[NEW] else ["_None this run._"]
+        out += activity_table(by_status[NEW], categories, max_rows, ctx=ctx) if by_status[NEW] else ["_None this run._"]
         out += ["", f"## ✏️ Updated activities ({len(by_status[UPDATED])})", ""]
         if by_status[UPDATED]:
             out += ["| Activity | Provider | Field | Old → New |", "|---|---|---|---|"]
@@ -203,12 +232,21 @@ def build_report(run: dict, config, max_rows: int | None = None) -> str:
         seasonal = [r for r in checked if r.get("program_type") in ("camp", "seasonal_program") or r.get("season")]
         out += ["", f"## 🏕️ Camps & seasonal programs ({len(seasonal)})", ""]
         seasonal.sort(key=lambda r: (r.get("season") or "zz", r.get("start_date") or "9999", r.get("name") or ""))
-        out += activity_table(seasonal, categories, max_rows, with_status=True) if seasonal else ["_None found._"]
+        out += (activity_table(seasonal, categories, max_rows, with_status=True, ctx=ctx) if seasonal
+                else ["_None found._"])
 
         out += ["", "<details><summary><b>✅ Unchanged activities "
                 f"({len(by_status[UNCHANGED])})</b> — previously known, re-checked this run</summary>", ""]
-        out += activity_table(by_status[UNCHANGED], categories, max_rows) if by_status[UNCHANGED] else ["_None._"]
+        out += (activity_table(by_status[UNCHANGED], categories, max_rows, ctx=ctx) if by_status[UNCHANGED]
+                else ["_None._"])
         out += ["", "</details>", ""]
+
+        out += ["<details><summary><b>🗄️ Past activities and adult courses "
+                f"({len(hidden)})</b> — not recommended, kept in history</summary>", "",
+                "| Activity | Provider | Why hidden | Dates |", "|---|---|---|---|"] if hidden else []
+        out += [f"| {activity_cell(r)} | {cell(r.get('provider'))} | {reasons[r['id']]} | {dates(r)} |"
+                for r in hidden[:max_rows]]
+        out += ["", "</details>", ""] if hidden else []
 
         out += [f"## ❔ Not found this run ({len(by_status[NOT_FOUND])})", "",
                 "_Source page was read successfully but these activities were no longer listed. "

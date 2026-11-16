@@ -1,5 +1,6 @@
 {
   "region": "South Bay / San Francisco Bay Area",
+  "timezone": "America/Los_Angeles",
   "default_age_min": 7,
   "default_age_max": 8,
   "cities": [

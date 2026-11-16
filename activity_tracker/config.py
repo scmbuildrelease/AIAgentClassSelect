@@ -58,6 +58,7 @@ class Source:
     campus_links: dict = field(default_factory=dict)  # {"pattern": regex with (?P<campus>), "addresses": {}}
     aggregator: dict = field(default_factory=dict)  # "nextjs_events" parser: regions / category_map
     role: str = "activities"  # set on page views: "organization" or "activities"
+    price_label: str | None = None  # page parser: take the price after this text (e.g. "Camp Tuition")
 
     @property
     def org_name(self) -> str:

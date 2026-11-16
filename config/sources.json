@@ -48,7 +48,9 @@
       "categories": ["stem", "camps"],
       "city": "Multiple Bay Area locations",
       "program_type": "camp",
-      "season": "summer"
+      "season": "summer",
+      "price_label": "Camp Tuition",
+      "notes": "Price is the general 'Camp Tuition' line; per-location prices (e.g. a 4-day SF week) are not used."
     },
     {
       "id": "sjys-camps",

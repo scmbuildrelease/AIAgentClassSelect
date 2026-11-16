@@ -10,6 +10,7 @@ from .config import AGGREGATOR, ConfigError, load_config, parse_category_filter
 from .discovery import find_candidates, merge_candidates
 from .extract import extract, geo_filter
 from .fetcher import Fetcher, FixtureFetcher
+from .recommend import annotate, local_today
 from .search import Glossary, link_language_variants
 from .report import build_report
 from .tracker import Store, assign_ids, merge_source, normalize_url, update_source_state
@@ -24,6 +25,7 @@ def run_discovery(config, store: Store, fetcher, params: dict, now: datetime | N
     now_s, today = now.strftime("%Y-%m-%dT%H:%M:%SZ"), now.date().isoformat()
     mode = params["mode"]
     refresh, discover = mode in ("refresh_known_sources", "both"), mode in ("discover_new_sources", "both")
+    local = local_today(now, config.settings.get("timezone"))  # Bay Area date, for activity lifecycle
     sources_state, courses, candidates = store.load()
     is_baseline = refresh and not courses["courses"]
     selected = set(params["categories"])
@@ -113,6 +115,8 @@ def run_discovery(config, store: Store, fetcher, params: dict, now: datetime | N
 
     if refresh:
         link_language_variants(courses, Glossary(config.settings.get("glossary", [])))
+        for rec in courses["courses"].values():  # lifecycle depends on today's date, so refresh it for all
+            annotate(rec, local)
 
     attempted = [s for s in source_results if s["status"] not in ("MANUAL", "PENDING_VERIFICATION")]
     succeeded = [s for s in attempted if s["status"] in ("OK", "PARTIAL")]
@@ -127,7 +131,7 @@ def run_discovery(config, store: Store, fetcher, params: dict, now: datetime | N
             meta["run_count"] = meta.get("run_count", 0) + 1
         store.save(sources_state, courses, candidates if discover else None)
 
-    return {"run_at": now_s, "params": params, "is_baseline": is_baseline, "saved": saved,
+    return {"run_at": now_s, "today": local.isoformat(), "params": params, "is_baseline": is_baseline, "saved": saved,
             "not_saved_reason": reason, "source_results": source_results, "events": events,
             "processed_source_ids": processed, "courses": courses, "new_candidates": new_candidates}
 

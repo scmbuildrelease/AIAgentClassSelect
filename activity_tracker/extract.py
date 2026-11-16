@@ -529,6 +529,11 @@ def extract_page(soup: BeautifulSoup, source, page_url: str, cities) -> list[dic
     rec["description"] = description or next(
         (p for p in (clean(p.get_text(" ")) for p in soup.find_all("p")) if p and len(p) > 80), None)
     _text_fields(rec, text, description)
+    if getattr(source, "price_label", None):
+        # the general price is the one after this label; other prices on the page belong to specific
+        # sessions or locations. No label on the page -> price unknown.
+        at = _nfkc(text).find(source.price_label)
+        rec["price"] = find_price(_nfkc(text)[at:at + 200]) if at >= 0 else None
     rec["registration_url"] = find_registration_url(soup.find("main") or soup.body or soup, page_url)
     if getattr(source, "campus_links", None):
         return split_campuses(soup, rec, source, page_url, text, cities)
@@ -682,14 +687,33 @@ def extract_aggregator_events(html: str, source, page_url: str, cities) -> list[
         rec["categories"] = mapped or list(source.categories)
         note = clean(ev.get("ageNote"))
         rec["age_text"] = note
-        # Notes like "0–5岁及5–10岁" or "适合6岁以上，9岁以下需成人陪同" hold several statements (ranges,
-        # supervision rules, exclusions). Their combined meaning is not reliably machine-readable, so
-        # numeric ages are taken only from a note with exactly one age statement; otherwise the note is
-        # shown as published and only the aggregator's age group is used for filtering.
-        if note and len(list(_age_candidates(_nfkc(note)))) == 1:
+        if note and audience_age_statement(note):
             _, rec["age_min"], rec["age_max"], rec["age_basis"] = parse_age(note)
         records.append(_finish(rec, source, "", cities))
     return records
+
+
+AGE_SUPERVISION_RE = re.compile(r"陪同|陪伴|监护|監護|协助|協助|accompan|supervis", re.I)
+AGE_EXCLUSION_RE = re.compile(r"不适合|不適合|不在|不得|不可|禁止|谢绝|謝絕|not (?:suitable|allowed|permitted)", re.I)
+
+
+def audience_age_statement(note: str) -> bool:
+    """True if an age note is exactly one statement of who the activity is for.
+
+    Notes with several statements ("0–5岁及5–10岁", "适合6岁以上，9岁以下需成人陪同") are not combined
+    into one range, and a lone supervision rule ("8岁以下须由成人陪同") or exclusion ("0-4岁不适合")
+    says who may not attend alone, not the audience. In those cases the note is kept as published
+    and no numeric age is derived.
+    """
+    text = _nfkc(note)
+    statements = list(_age_candidates(text))
+    if len(statements) != 1:
+        return False
+    m = statements[0][0]
+    start = max(text.rfind(ch, 0, m.start()) for ch in ",，;；。") + 1
+    ends = [i for i in (text.find(ch, m.end()) for ch in ",，;；。") if i >= 0]
+    clause = text[start:min(ends) if ends else len(text)]
+    return not (AGE_SUPERVISION_RE.search(clause) or AGE_EXCLUSION_RE.search(clause))
 
 
 BAY_AREA_TERMS = ["bay area", "湾区", "灣區", "south bay", "east bay", "north bay", "peninsula",

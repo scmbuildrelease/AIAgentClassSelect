@@ -2,8 +2,10 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import os
 import json
+from datetime import date
 
 from activity_tracker.i18n import display
+from activity_tracker.recommend import ADULT, PAST, audience, lifecycle, local_today
 from activity_tracker.search import Glossary, search
 
 app = Flask(__name__)
@@ -28,6 +30,7 @@ def get_courses():
 
     Every item keeps its original `name`/`description`; `display` is what to show for `lang`.
     Cross-language duplicates are returned once (the twin's text is in `translations`).
+    Past activities and adult courses are left out unless ?all=1 (they stay in the data file).
     """
     if not os.path.exists(DATA_FILE):
         return jsonify([])
@@ -35,6 +38,11 @@ def get_courses():
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             courses = [c for c in json.load(f).get("courses", {}).values() if not c.get("duplicate_of")]
         settings = load_settings()
+        today = (date.fromisoformat(os.environ["TODAY"]) if os.getenv("TODAY")  # TODAY: pinned date for tests
+                 else local_today(tz=settings.get("timezone")))
+        courses = [{**c, "lifecycle": lifecycle(c, today), "audience": audience(c)} for c in courses]
+        if request.args.get("all") != "1":
+            courses = [c for c in courses if c["lifecycle"] != PAST and c["audience"] != ADULT]
         query = request.args.get("q", "").strip()
         if query:
             labels = {k: " ".join([v.get("label", ""), v.get("short", "")])
