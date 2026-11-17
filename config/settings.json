@@ -1,6 +1,7 @@
 {
   "region": "South Bay / San Francisco Bay Area",
   "timezone": "America/Los_Angeles",
+  "progressive_search": {"target_results": 5, "minimum_results": 3, "max_results": 10, "min_similarity": 0.35},
   "default_age_min": 7,
   "default_age_max": 8,
   "cities": [

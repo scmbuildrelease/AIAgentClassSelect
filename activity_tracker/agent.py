@@ -143,9 +143,37 @@ class OllamaClient:
                               f"(installed: {', '.join(sorted(n for n in names if n)) or 'none'}); "
                               f"set AI_MODEL to one of them or run `ollama pull {self.model}`")
 
-    def chat(self, messages: list[dict], tools: list[dict]) -> dict:
-        payload = {"model": self.model, "messages": messages, "tools": tools, "stream": False,
-                   "options": {"temperature": 0}}
+    def chat(self, messages: list[dict], tools: list[dict] | None = None, json_mode: bool = False) -> dict:
+        payload: dict[str, Any] = {"model": self.model, "messages": messages, "stream": False,
+                                   "options": {"temperature": 0}}
+        if tools:
+            payload["tools"] = tools
+        if json_mode:
+            payload["format"] = "json"
+        return self._post_message(payload)
+
+    def embed(self, texts: list[str], model: str) -> list[list[float]]:
+        """Embedding vectors from the server (POST /api/embed); OllamaError says why when unsupported."""
+        try:
+            r = self.session.post(f"{self.base_url}/api/embed", json={"model": model, "input": texts},
+                                  timeout=self.timeout)
+        except requests.Timeout:
+            raise OllamaError(f"embedding model {model!r} did not answer within {self.timeout:.0f}s") from None
+        except requests.RequestException:
+            raise self._unreachable() from None
+        try:
+            body = r.json()
+        except ValueError:
+            body = {}
+        if r.status_code != 200 or not isinstance(body, dict):
+            error = body.get("error") if isinstance(body, dict) else None
+            raise OllamaError(f"embeddings unavailable: {error or f'HTTP {r.status_code}'}")
+        vectors = body.get("embeddings")
+        if not isinstance(vectors, list) or len(vectors) != len(texts):
+            raise OllamaError("Ollama returned no embeddings")
+        return vectors
+
+    def _post_message(self, payload: dict) -> dict:
         try:
             r = self.session.post(f"{self.base_url}/api/chat", json=payload, timeout=self.timeout)
         except requests.Timeout:
@@ -193,6 +221,37 @@ DETAIL_FIELDS = ("id", "name", "provider", "organizer", "city", "location", "cat
                  "registration_url", "source_url", "original_event_url", "lifecycle")
 
 
+def location_matcher(location: str | None, cities) -> Callable[[dict], bool] | None:
+    """Predicate for records in the given place, or None when it names no place ("Bay Area" is not one)."""
+    location = REGION_RE.sub(" ", location or "").strip(" ,")
+    if not location:
+        return None
+    wanted = set(detect_cities(location, cities))  # "圣何塞" -> San Jose
+    place = search_key(location)
+
+    def here(r: dict) -> bool:
+        text = " ".join(filter(None, (r.get("city"), r.get("location"))))
+        return bool(wanted & set(detect_cities(text, cities))) if wanted else place in search_key(text)
+    return here
+
+
+def age_matches(rec: dict, min_age: int, max_age: int) -> bool:
+    """Published ages (or the aggregator's broad age group) include the wanted ages."""
+    return age_fit(rec, min_age, max_age) in (AGE_MATCH_CONFIRMED, AGE_GROUP_MATCH)
+
+
+def has_published_age(rec: dict) -> bool:
+    return not (rec.get("age_min") is None and rec.get("age_max") is None and rec.get("age_group_min") is None)
+
+
+def dates_overlap(rec: dict, start: date, end: date) -> bool | None:
+    """Whether published dates overlap start..end; None when the record publishes no dates."""
+    span = date_span(rec)
+    if span is None:
+        return None
+    return span[0] <= end and (span[1] is None or span[1] >= start)
+
+
 class ActivityTools:
     """The four tools, over the current (non-past, non-adult) activities. Read-only."""
 
@@ -225,15 +284,10 @@ class ActivityTools:
         recs = self.catalog
         if category:
             recs = [r for r in recs if category in (r.get("categories") or [])]
-        location = REGION_RE.sub(" ", location or "").strip(" ,")
-        if location:
-            wanted = set(detect_cities(location, self.cities))  # "圣何塞" -> San Jose
-            place = search_key(location)
-
-            def here(r: dict) -> bool:
-                text = " ".join(filter(None, (r.get("city"), r.get("location"))))
-                return bool(wanted & set(detect_cities(text, self.cities))) if wanted else place in search_key(text)
+        here = location_matcher(location, self.cities)
+        if here:
             recs = [r for r in recs if here(r)]
+        location = REGION_RE.sub(" ", location or "").strip(" ,")
         terms = _keyword(keyword or "")
         if terms:
             recs = search(recs, terms, self.glossary, self.labels)
@@ -247,8 +301,7 @@ class ActivityTools:
         fits = {r["id"]: age_fit(r, age, age) for r in base}
         kept = [r for r in base if fits[r["id"]] == AGE_MATCH_CONFIRMED] + \
                [r for r in base if fits[r["id"]] == AGE_GROUP_MATCH]
-        unknown = sum(1 for r in base if r.get("age_min") is None and r.get("age_max") is None
-                      and r.get("age_group_min") is None)
+        unknown = sum(1 for r in base if not has_published_age(r))
         out = self._result(kept, left_out_without_published_age=unknown)
         for item, rec in zip(out["activities"], kept):
             item["age_fit"] = age_fit_note(rec, age, age)
@@ -257,13 +310,9 @@ class ActivityTools:
     def filter_by_date(self, start_date: date, end_date: date | None = None) -> dict:
         end_date = end_date or start_date
         base = self.catalog if self.current is None else self.current
-        kept, undated = [], 0
-        for r in base:
-            span = date_span(r)
-            if span is None:
-                undated += 1
-            elif span[0] <= end_date and (span[1] is None or span[1] >= start_date):
-                kept.append(r)
+        overlaps = {r["id"]: dates_overlap(r, start_date, end_date) for r in base}
+        kept = [r for r in base if overlaps[r["id"]]]
+        undated = sum(1 for r in base if overlaps[r["id"]] is None)
         return self._result(kept, left_out_without_published_dates=undated)
 
     def get_activity_details(self, activity_id: str) -> dict:

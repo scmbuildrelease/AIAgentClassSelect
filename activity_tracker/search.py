@@ -52,14 +52,16 @@ def record_text(rec: dict) -> str:
     return search_key(" ".join(parts))
 
 
-def search(records: list[dict], query: str, glossary: Glossary, category_labels: dict | None = None) -> list[dict]:
+def search_scored(records: list[dict], query: str, glossary: Glossary,
+                  category_labels: dict | None = None) -> tuple[list[tuple[int, dict]], int]:
     """All query concepts/terms must match (AND); each concept matches any of its synonyms.
 
-    Results are ranked by matches in the title first.
+    Returns (score, record) pairs ranked by matches in the title first, and the highest possible
+    score (every concept and term in the title). An empty query matches everything with score 0.
     """
     concepts, words = glossary.segment(query)
     if not concepts and not words:
-        return list(records)
+        return [(0, r) for r in records], 0
     labels = category_labels or {}
     results = []
     for rec in records:
@@ -76,7 +78,12 @@ def search(records: list[dict], query: str, glossary: Glossary, category_labels:
             if all(_contains(text, w) for w in words):
                 results.append((score + sum(_contains(title, w) for w in words), rec))
     results.sort(key=lambda x: (-x[0], x[1].get("name") or ""))
-    return [r for _, r in results]
+    return results, 2 * len(concepts) + len(words)
+
+
+def search(records: list[dict], query: str, glossary: Glossary, category_labels: dict | None = None) -> list[dict]:
+    """Matching records, best first (see search_scored)."""
+    return [r for _, r in search_scored(records, query, glossary, category_labels)[0]]
 
 
 def _site(url: str | None) -> str:
