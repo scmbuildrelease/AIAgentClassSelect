@@ -4,7 +4,7 @@ FROM python:3.12-slim
 WORKDIR /app
 ENV PYTHONUTF8=1 LANG=C.UTF-8
 
-RUN pip install --no-cache-dir "flask>=2.3" "flask-cors>=4.0" "requests>=2.31" "beautifulsoup4>=4.12"
+RUN pip install --no-cache-dir "flask>=2.3" "requests>=2.31" "beautifulsoup4>=4.12"
 
 COPY activity_tracker ./activity_tracker
 COPY config/settings.json ./config/settings.json

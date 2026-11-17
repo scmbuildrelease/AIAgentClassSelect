@@ -23,7 +23,6 @@ COURSES = {
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     pytest.importorskip("flask")
-    pytest.importorskip("flask_cors")
     data = tmp_path / "courses.json"
     data.write_text(json.dumps({"courses": COURSES}, ensure_ascii=False), encoding="utf-8")
     monkeypatch.setenv("COURSES_FILE", str(data))
@@ -109,3 +108,10 @@ def test_new_endpoints_never_write_the_data_file(client):
     for url in ("/courses?age=8&city=San Jose", "/options", "/health", "/courses?all=1"):
         client.get(url)
     assert hashlib.sha256(client.data_file.read_bytes()).hexdigest() == before
+
+
+def test_no_cors_headers_browsers_use_the_same_origin_proxy(client):
+    for r in (client.get("/courses", headers={"Origin": "http://evil.example"}),
+              client.options("/agent/chat", headers={"Origin": "http://evil.example",
+                                                     "Access-Control-Request-Method": "POST"})):
+        assert "Access-Control-Allow-Origin" not in r.headers

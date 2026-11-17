@@ -106,6 +106,26 @@ python -m activity_tracker --config-dir tests/fixtures/config --data-dir /tmp/de
 python -m activity_tracker --min-age 7 --max-age 8 --mode refresh_known_sources
 ```
 
+## Personal edition: Mac and iPhone
+
+The viewer app has four sections: **Discover** (search and filters), **AI Assistant**, **Saved** and **Settings**.
+It is laid out for phones first (iPhone 15 Pro Max and smaller) and also works on tablets and desktops.
+To run it on your Mac and open it from an iPhone on the same Wi-Fi:
+
+```bash
+docker compose up --build -d                  # then open http://localhost:3000 on the Mac
+ipconfig getifaddr en0                        # the Mac's LAN IP (en1 on some Macs); it can change
+# iPhone Safari, same Wi-Fi:  http://<that IP>:3000
+```
+
+Only the frontend (port 3000) is reachable from the network. The backend is published on the Mac's
+`127.0.0.1:8000` only, and the frontend reaches it over the internal Docker network. Ollama stays on the Mac's
+`127.0.0.1:11434`. **There is no login:** anyone on the same Wi-Fi who can reach port 3000 can use the app.
+Saved activities and preferences stay in each device's browser. Don't port-forward it to the internet.
+
+Setup, the same-Wi-Fi requirements, the security details and firewall troubleshooting are in
+[docs/INSTALL_MAC.md](docs/INSTALL_MAC.md).
+
 ## Viewer images (Docker)
 
 The optional backend/frontend viewer is published by `.github/workflows/docker-build.yml` as multi-platform

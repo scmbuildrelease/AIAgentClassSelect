@@ -3,4 +3,3 @@ pytest>=8.0
 PyYAML>=6.0
 # backend API tests
 flask>=2.3
-flask-cors>=4.0

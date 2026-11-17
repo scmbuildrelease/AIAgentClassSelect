@@ -214,7 +214,6 @@ def test_disabled_or_unsupported_configuration(env, status, error):
 
 def test_endpoint_returns_cards_and_leaves_the_data_unchanged(tmp_path, monkeypatch):
     pytest.importorskip("flask")
-    pytest.importorskip("flask_cors")
     data = tmp_path / "courses.json"
     data.write_text(json.dumps({"courses": {c["id"]: c for c in COURSES}}, ensure_ascii=False), encoding="utf-8")
     before = hashlib.sha256(data.read_bytes()).hexdigest()

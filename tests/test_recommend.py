@@ -181,7 +181,6 @@ def test_adult_courses_are_kept_but_not_recommended(six_run, six_config, tmp_pat
 
 def test_backend_hides_past_and_adult_by_default(tmp_path, monkeypatch):
     pytest.importorskip("flask")
-    pytest.importorskip("flask_cors")
     data = tmp_path / "courses.json"
     data.write_text(json.dumps({"courses": {
         "past": {"id": "past", "name": "Summer Camp", "start_date": "2026-06-15", "end_date": "2026-07-17"},
@@ -281,7 +280,6 @@ def test_missing_time_zone_data_is_logged(monkeypatch, caplog):
 def test_api_and_cli_agree_at_the_pacific_utc_boundary(six_config, tmp_path, monkeypatch):  # noqa: F811
     """8:00 pm Pacific on Nov 15, 2026 is 04:00 UTC on Nov 16: the Bay Area date is still Nov 15."""
     pytest.importorskip("flask")
-    pytest.importorskip("flask_cors")
     from datetime import datetime, timezone
     import activity_tracker.recommend as rec_mod
     from activity_tracker.cli import run_discovery

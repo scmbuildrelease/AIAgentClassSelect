@@ -323,7 +323,6 @@ def test_bilingual_run_report_and_persistence(zh_config, tmp_path, monkeypatch):
 
 def test_backend_returns_unescaped_chinese_and_searches(tmp_path, monkeypatch):
     pytest.importorskip("flask")
-    pytest.importorskip("flask_cors")
     data = tmp_path / "courses.json"
     data.write_text(json.dumps({"courses": {
         "a": {"id": "a", "name": "Robotics Summer Camp", "original_language": "en", "provider": "X",

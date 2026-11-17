@@ -1,5 +1,4 @@
 from flask import Flask, jsonify, request
-from flask_cors import CORS
 import os
 import json
 from datetime import date
@@ -14,7 +13,8 @@ from activity_tracker.search import Glossary, search
 app = Flask(__name__)
 app.json.ensure_ascii = False  # send Chinese as UTF-8 text, not \uXXXX escapes
 app.json.mimetype = "application/json; charset=utf-8"
-CORS(app)
+# No CORS headers: browsers reach this API only through the frontend server's same-origin proxy
+# (frontend/package.json "proxy"). CORS is not an access control; see docs/INSTALL_MAC.md for the network setup.
 
 DATA_FILE = os.getenv("COURSES_FILE", "/data/courses.json")
 SETTINGS_FILE = os.getenv("SETTINGS_FILE", "/app/config/settings.json")
@@ -155,4 +155,6 @@ def agent_chat():
 
 
 if __name__ == "__main__":
+    # 0.0.0.0 inside the container so the frontend container can reach backend:8000 over the Docker network.
+    # docker-compose.yml publishes the port on the Mac's loopback only (127.0.0.1:8000), not to the LAN.
     app.run(host="0.0.0.0", port=8000)
