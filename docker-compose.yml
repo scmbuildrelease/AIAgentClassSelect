@@ -1,6 +1,8 @@
 # Personal edition: open the app at http://localhost:3000 on this Mac, or http://<this Mac's LAN IP>:3000
 # from a phone on the same Wi-Fi (docs/INSTALL_MAC.md). There is no login: anyone on the same network who can
 # reach port 3000 can use the app. Only the frontend is published to the LAN.
+# Machine-specific settings (ports, AI model) go in .env; see .env.example. No named volumes: each clone
+# builds its own images and reads its own ./data.
 services:
   backend:
     build:
@@ -9,25 +11,29 @@ services:
     # Loopback only: reachable from this Mac (curl localhost:8000) but not from other devices. The frontend
     # reaches it as backend:8000 on the internal Docker network (Flask listens on 0.0.0.0 inside the container).
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"  # always loopback; only the port number is configurable
     volumes:
       - ./data:/data:ro  # the viewer only reads courses.json; discovery runs write it outside Docker
     # AI Assistant (POST /agent/chat): the Ollama app already running on this Mac, not a second instance.
     # Ollama stays on the Mac's 127.0.0.1:11434; Docker Desktop forwards host.docker.internal to it, so it is
-    # never published to the LAN. Override with e.g. AI_MODEL=qwen2.5:7b docker compose up, or AI_ENABLED=false.
+    # never published to the LAN. Set AI_MODEL / AI_ENABLED=false etc. in .env (see .env.example).
     environment:
       - AI_ENABLED=${AI_ENABLED:-true}
       - AI_PROVIDER=ollama
       - AI_MODEL=${AI_MODEL:-qwen2.5:1.5b}
       - AI_BASE_URL=${AI_BASE_URL:-http://host.docker.internal:11434}
+      - AI_TIMEOUT=${AI_TIMEOUT:-120}
+      - AI_MAX_ITERATIONS=${AI_MAX_ITERATIONS:-5}
     extra_hosts:
       - "host.docker.internal:host-gateway"  # built in on Docker Desktop (Mac); needed on Linux
 
   frontend:
     build: ./frontend
-    # All interfaces, so phones on the same Wi-Fi can open it. API calls are proxied to backend:8000.
+    # All interfaces (IPv4 and IPv6) unless FRONTEND_BIND is set, so phones on the same Wi-Fi can open it;
+    # FRONTEND_BIND=127.0.0.1 limits it to this Mac.
+    # API calls are proxied to backend:8000 on the internal Docker network.
     ports:
-      - "3000:3000"
+      - "${FRONTEND_BIND:+${FRONTEND_BIND:-}:}${FRONTEND_PORT:-3000}:3000"
     environment:
       - WDS_SOCKET_PORT=0  # live-reload websocket uses the page's own host and port (works from the LAN IP)
     depends_on:

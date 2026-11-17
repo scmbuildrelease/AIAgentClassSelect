@@ -24,7 +24,7 @@ from .i18n import search_key
 from .recommend import AGE_GROUP_MATCH, AGE_MATCH_CONFIRMED, age_fit, age_fit_note, date_span
 from .search import Glossary, search
 
-DEFAULT_MODEL = "qwen2.5:1.5b"  # the Qwen model already installed for CIRCA; nothing new is pulled
+DEFAULT_MODEL = "qwen2.5:1.5b"  # small tool-calling model (~1 GB) that runs on an 8 GB Mac; pull it with Ollama
 DEFAULT_BASE_URL = "http://localhost:11434"
 MAX_ITERATIONS = 5             # model calls per request
 MAX_TOOL_CALLS_PER_STEP = 4

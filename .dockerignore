@@ -1,0 +1,19 @@
+# Build context for backend/Dockerfile (context "."). The image copies only activity_tracker/,
+# config/settings.json and backend/app.py; keep local environments, data and secrets out of the context.
+.git
+.github
+.env
+.env.*
+.venv
+venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.mypy_cache
+.ruff_cache
+frontend
+data
+reports
+tests
+docs
+*.md

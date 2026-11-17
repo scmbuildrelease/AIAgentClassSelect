@@ -1,46 +1,161 @@
 # Install and run on a Mac (personal edition)
 
 The app runs on one Mac with Docker. You open it in a browser on that Mac, or on an iPhone (or any other phone,
-tablet or computer) connected to the same Wi-Fi network. Nothing is put on the internet.
+tablet or computer) connected to the same Wi-Fi network. Nothing is put on the internet: there is no cloud server,
+account, paid service, API key, Apple Developer account or App Store app. Each Mac that follows this guide runs its
+own independent copy.
 
 | Where | Address |
 |---|---|
 | On the Mac | `http://localhost:3000` |
 | iPhone / other device on the same Wi-Fi | `http://<Mac LAN IP>:3000`, e.g. `http://192.168.1.23:3000` |
 
+**About the activity data:** the repository includes activities collected for the **San Francisco Bay Area**
+(`data/courses.json`, updated by the project's scheduled discovery runs). Every installation shows that same data.
+Tracking activities in another region means adding your own sources and running discovery yourself (see
+"Adding sources, cities, categories, ages" in the [README](../README.md)); that is not covered by this guide.
+
+## What needs Ollama
+
+| Feature | Without Ollama | Needs Ollama + a model |
+|---|---|---|
+| Discover: search (English/Chinese), categories, age/city/date filters, activity cards, official links | ✓ | |
+| Saved activities (stored in each browser) | ✓ | |
+| Settings: language, child's age, preferred city, favorite categories, status | ✓ | |
+| **AI Assistant** tab: questions in plain English or Chinese, answered by a local model that searches the activities | | ✓ |
+
+Without Ollama, the AI Assistant tab shows why it is unavailable and Settings → Status shows Ollama as unavailable;
+everything else works.
+
 ## 1. Prerequisites (once)
 
-- **Docker Desktop for Mac** (Apple Silicon or Intel), started.
-- **git**, to get the repository: `xcode-select --install` provides it.
-- **Ollama** (optional, only for the AI Assistant): install the Ollama app from <https://ollama.com>, start it, and
-  download the model once:
-
-  ```bash
-  ollama pull qwen2.5:1.5b
-  ollama list            # qwen2.5:1.5b should be listed
-  ```
-
-  Without Ollama, Discover, Saved and Settings still work, and the AI Assistant shows that the local model is
-  unavailable. To turn it off completely, start with `AI_ENABLED=false docker compose up -d`.
-
-## 2. Start the app
+Check your Mac first:
 
 ```bash
-git clone <repository URL> AIAgentClassSelect
-cd AIAgentClassSelect
-docker compose up --build -d      # first start builds the images (a few minutes)
-docker compose ps                 # backend and frontend should be "running"
+uname -m                                                     # arm64 = Apple Silicon (M1–M4), x86_64 = Intel
+sysctl -n hw.memsize | awk '{print $1/1073741824 " GB"}'     # memory, used to pick the AI model below
 ```
 
-Open `http://localhost:3000` on the Mac. The frontend takes about 30 seconds to compile after a start; reload if
-the page is not ready yet. **Settings → Status** shows whether the backend, the activity data, the AI Assistant and
-Ollama are connected.
+1. **git** (to download the repository): run `git --version`. If macOS offers to install the command line
+   developer tools, accept (or run `xcode-select --install`).
+2. **Docker Desktop for Mac** (free for personal use): download it from
+   <https://www.docker.com/products/docker-desktop/>, choosing **Apple Silicon** or **Intel** to match `uname -m`.
+   Open Docker.app, accept its terms, and wait until it shows "Docker Desktop is running". You don't need to sign
+   in. Check:
 
-Stop it with `docker compose down`. Your saved activities and preferences are not affected; they are stored in each
-browser (see [Privacy](#privacy)).
+   ```bash
+   docker version --format '{{.Server.Version}}'     # prints a version, not "Cannot connect to the Docker daemon"
+   docker compose version
+   ```
 
-Activity data comes from `data/courses.json` in the repository. `git pull` gets the latest published data; the
-app reads it on every request, so no restart is needed.
+   The default Docker Desktop resources are enough; the AI model runs in Ollama, outside Docker.
+3. **Ollama** (optional, only for the AI Assistant): download the macOS app from <https://ollama.com/download>,
+   move it to Applications and open it (it keeps running in the menu bar and starts at login). Check:
+
+   ```bash
+   ollama --version
+   curl -s http://127.0.0.1:11434/api/version        # {"version":"..."} while the Ollama app is running
+   ```
+
+   Ollama runs natively on the Mac so it can use the Apple Silicon GPU. Don't run it inside Docker, and don't
+   change it to listen on the network (`OLLAMA_HOST=0.0.0.0`); see [Network security](#5-network-security).
+
+### Choose and download an AI model
+
+The assistant needs a model that supports **tool calling**. The Qwen 2.5 family does. Pick by memory. The model
+shares memory with macOS, Docker and your other apps, so leave several GB free:
+
+| Mac memory | Model (`AI_MODEL`) | Download | Notes |
+|---|---|---|---|
+| 8 GB | `qwen2.5:1.5b` (default) | ≈1 GB | **The only model tested with this app.** Answers in seconds; it sometimes misses a filter (e.g. age), so check the activity cards. |
+| 16 GB | `qwen2.5:3b` or `qwen2.5:7b` | ≈1.9 GB / ≈4.7 GB | Untested here; larger models usually follow instructions better but answer more slowly. |
+| 32 GB or more | `qwen2.5:7b` or `qwen2.5:14b` | ≈4.7 GB / ≈9 GB | Untested here. |
+
+Intel Macs run models on the CPU: use `qwen2.5:1.5b` and set `AI_TIMEOUT=300` (step 2).
+
+```bash
+ollama pull qwen2.5:1.5b      # or the model you chose
+ollama list                   # the model must be listed
+```
+
+Activity facts on the cards (dates, ages, prices, links) always come from the data, whichever model you use. The
+model only writes the summary text, which can be imprecise.
+
+## 2. Install, configure and start
+
+```bash
+cd ~                                     # or any folder you like
+git clone https://github.com/scmbuildrelease/AIAgentClassSelect.git
+cd AIAgentClassSelect
+cp .env.example .env                     # optional: only needed to change the defaults
+```
+
+**Configuration (`.env`, optional).** Every setting has a default, so you can skip this. Otherwise edit `.env`
+(e.g. `open -e .env`); each setting is explained in [`.env.example`](../.env.example):
+
+| Setting | Default | Change it when |
+|---|---|---|
+| `AI_MODEL` | `qwen2.5:1.5b` | you pulled a different model |
+| `AI_ENABLED` | `true` | `false` turns the AI Assistant off (no Ollama needed) |
+| `AI_TIMEOUT` | `120` | larger models or Intel Macs (e.g. `300`) |
+| `AI_MAX_ITERATIONS` | `5` | rarely |
+| `AI_BASE_URL` | `http://host.docker.internal:11434` | Ollama listens on a non-default port |
+| `FRONTEND_PORT` | `3000` | port 3000 is already used on your Mac |
+| `FRONTEND_BIND` | empty (all interfaces) | `127.0.0.1`: only this Mac can open the app |
+| `BACKEND_PORT` | `8000` | port 8000 is already used (the backend is always on `127.0.0.1` only) |
+
+`.env` is ignored by git, so `git pull` never overwrites it. Variables exported in your shell take precedence
+over `.env`; `env | grep -E '^(AI_|FRONTEND_|BACKEND_)'` shows any.
+
+**Start:**
+
+```bash
+docker compose up --build -d      # first start downloads base images and builds (a few minutes)
+docker compose ps                 # backend and frontend should be "running"/"Up"
+```
+
+Open `http://localhost:3000` on the Mac (or your `FRONTEND_PORT`). The frontend takes about 30 seconds to compile
+after each start; reload if the page is not ready yet. **Settings → Status** shows whether the backend, the
+activity data, the AI Assistant and Ollama are connected.
+
+### Everyday commands
+
+```bash
+cd ~/AIAgentClassSelect
+docker compose up -d                       # start (after a reboot, start Docker Desktop first)
+docker compose down                        # stop
+docker compose ps                          # status
+docker compose logs -f frontend backend    # logs (Ctrl-C to stop following)
+docker compose up -d                       # apply changes made to .env
+git pull && docker compose up --build -d   # update the app and the activity data
+```
+
+Stopping or updating does not affect saved activities and preferences; they are stored in each browser (see
+[Privacy](#privacy)). The app reads `data/courses.json` on every request, so a `git pull` that only changes data
+needs no restart.
+
+### What each installation owns
+
+- Its own clone of the repository, including its own `data/` (mounted **read-only** into the backend) and `.env`.
+- Its own Docker images and containers, built from that clone and named after the folder (e.g.
+  `aiagentclassselect-backend`). There are no Docker volumes and no database.
+- Its own browser storage on each device for saved activities and preferences.
+- Ollama and its models are outside Docker and are only used, never changed, by the app.
+
+Nothing depends on another person's Mac, Docker images, models or settings. To run two copies on one Mac, clone
+into two differently named folders and give the second one other ports in its `.env`.
+
+### Uninstall
+
+```bash
+cd ~/AIAgentClassSelect
+docker compose down --rmi local     # removes this app's containers, network and images
+cd .. && rm -rf AIAgentClassSelect  # removes the code, data and .env
+ollama rm qwen2.5:1.5b              # optional: removes the model
+```
+
+The shared base images (`python:3.12-slim`, `node:20-alpine`) stay in Docker; remove them with `docker image rm`
+if nothing else uses them. In Safari, saved activities disappear when you clear the site's website data.
 
 ## 3. Find the Mac's LAN IP address
 
@@ -85,7 +200,7 @@ addresses and answers "Invalid Host header" to other host names (this protects a
 
 ## 5. Network security
 
-**What is reachable from the Wi-Fi network:** only the frontend on port **3000**.
+**What is reachable from the Wi-Fi network:** only the frontend on port **3000** (or your `FRONTEND_PORT`).
 
 **There is no login or access code.** Anyone on the same Wi-Fi network who knows (or scans for) the Mac's address
 can open the app, browse activities and use the AI Assistant, which runs on your Mac's Ollama. They cannot see
@@ -94,7 +209,7 @@ network you trust; run `docker compose down` when you're on a shared network.
 
 | Service | Listens on | Reachable from |
 |---|---|---|
-| Frontend (React development server) | `0.0.0.0:3000` | the Mac and the local network |
+| Frontend (React development server) | all interfaces, port 3000 (`127.0.0.1` only with `FRONTEND_BIND=127.0.0.1`) | the Mac and the local network |
 | Backend (Flask API) | `127.0.0.1:8000` on the Mac; `0.0.0.0:8000` inside its container | the Mac, and the frontend container over the internal Docker network (`backend:8000`) |
 | Ollama | `127.0.0.1:11434` on the Mac (Ollama's default) | the Mac, and the backend container through `host.docker.internal` |
 
@@ -103,8 +218,9 @@ network you trust; run `docker compose down` when you're on a shared network.
 - The backend sends no CORS headers, and API responses through the frontend carry none either, so other websites
   open in a browser cannot read the API. CORS is not an access control, though; the network rules above are.
 - The backend mounts `data/` read-only.
-- Do **not** set `OLLAMA_HOST=0.0.0.0`, change the backend port to `"8000:8000"`, or set up router port
-  forwarding. Any of these would expose more than the frontend. This edition is not meant for the internet.
+- Do **not** set `OLLAMA_HOST=0.0.0.0`, remove `127.0.0.1:` from the backend's port mapping in
+  `docker-compose.yml`, or set up router port forwarding. Any of these would expose more than the frontend.
+  This edition is not meant for the internet.
 
 Check what is listening:
 
@@ -139,11 +255,32 @@ docker compose ps        # backend 127.0.0.1:8000->8000/tcp, frontend 0.0.0.0:30
 **The page loads but shows errors, or Settings shows the backend as unavailable**: `docker compose ps` and
 `docker compose logs backend`. `curl -s localhost:8000/health` on the Mac checks the backend directly.
 
-**AI Assistant: "Local AI model unavailable"**: start the Ollama app, check `ollama list` shows `qwen2.5:1.5b`,
-then Settings → Status → Refresh. Answers take several seconds on the 1.5B model.
+**Port 3000 or 8000 already in use** ("port is already allocated"): set `FRONTEND_PORT` / `BACKEND_PORT` in `.env`
+(e.g. `3001`), then `docker compose up -d`, and use that port in the URLs.
 
-**Port 3000 or 8000 already in use**: stop the other program, or change the left-hand side of the mapping in
-`docker-compose.yml` (for example `"3001:3000"`, and keep `127.0.0.1:` on the backend's).
+**"Cannot connect to the Docker daemon"**: open Docker Desktop and wait until it is running.
+
+**The build fails while downloading** (`failed to resolve source metadata`, timeouts): check the internet connection
+and retry `docker compose up --build -d`. The base images are public; no Docker login is needed.
+
+**AI Assistant: "Local AI model unavailable"**: the message says why (see the next entries). After fixing it,
+use Settings → Status → Refresh. Answers take several seconds on the 1.5B model.
+
+**AI Assistant: "model '…' is not installed"**: run the `ollama pull` it suggests, or set `AI_MODEL` in `.env` to a
+model from `ollama list`, then `docker compose up -d`.
+
+**AI Assistant: "no Ollama server is reachable"**: open the Ollama app (`curl -s http://127.0.0.1:11434/api/version`
+should answer). If you changed Ollama's port, update `AI_BASE_URL`.
+
+**AI Assistant: "The AI assistant is turned off"**: `AI_ENABLED=false` is set in `.env` or in your shell.
+
+**AI answers time out or are very slow**: use a smaller model, or raise `AI_TIMEOUT` in `.env` (Intel Macs: `300`).
+
+**Settings changed in `.env` have no effect**: run `docker compose up -d` after editing, and check that the shell
+doesn't override them: `env | grep -E '^(AI_|FRONTEND_|BACKEND_)'`.
+
+**Something still looks wrong after an update**: rebuild without cache with `docker compose build --no-cache` and
+then `docker compose up -d`.
 
 ## Privacy
 

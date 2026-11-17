@@ -47,7 +47,7 @@ only, and temperature 0.
 |---|---|---|
 | `AI_ENABLED` | off | `true` turns the assistant on. When off, `/agent/chat` returns `agent_status: "disabled"`. |
 | `AI_PROVIDER` | `ollama` | The only accepted value. Anything else is refused; there is no cloud provider. |
-| `AI_MODEL` | `qwen2.5:1.5b` | The Qwen model already installed for CIRCA. Nothing new is pulled. |
+| `AI_MODEL` | `qwen2.5:1.5b` | The Qwen model already installed for CIRCA on the original Mac. A new Mac pulls it with `ollama pull qwen2.5:1.5b` (or a larger model; see [INSTALL_MAC.md](INSTALL_MAC.md)). |
 | `AI_BASE_URL` | `http://localhost:11434` | In Docker: `http://host.docker.internal:11434` (set by `docker-compose.yml`) |
 | `AI_TIMEOUT` | `120` | Seconds per model call |
 | `AI_MAX_ITERATIONS` | `5` | Model calls per request |

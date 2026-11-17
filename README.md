@@ -113,18 +113,27 @@ It is laid out for phones first (iPhone 15 Pro Max and smaller) and also works o
 To run it on your Mac and open it from an iPhone on the same Wi-Fi:
 
 ```bash
+git clone https://github.com/scmbuildrelease/AIAgentClassSelect.git && cd AIAgentClassSelect
+cp .env.example .env                          # optional: ports, AI model, AI on/off
+ollama pull qwen2.5:1.5b                      # optional: only for the AI Assistant (needs the Ollama app)
 docker compose up --build -d                  # then open http://localhost:3000 on the Mac
 ipconfig getifaddr en0                        # the Mac's LAN IP (en1 on some Macs); it can change
 # iPhone Safari, same Wi-Fi:  http://<that IP>:3000
+docker compose down                           # stop
 ```
+
+Requirements: Docker Desktop for Mac (Apple Silicon or Intel). Ollama is needed only for the AI Assistant;
+Discover, Saved and Settings work without it. No accounts, API keys, cloud services or App Store app.
+The included activity data covers the San Francisco Bay Area.
 
 Only the frontend (port 3000) is reachable from the network. The backend is published on the Mac's
 `127.0.0.1:8000` only, and the frontend reaches it over the internal Docker network. Ollama stays on the Mac's
 `127.0.0.1:11434`. **There is no login:** anyone on the same Wi-Fi who can reach port 3000 can use the app.
 Saved activities and preferences stay in each device's browser. Don't port-forward it to the internet.
 
-Setup, the same-Wi-Fi requirements, the security details and firewall troubleshooting are in
-[docs/INSTALL_MAC.md](docs/INSTALL_MAC.md).
+[docs/INSTALL_MAC.md](docs/INSTALL_MAC.md) covers step-by-step installation on another Mac, choosing a model by
+Mac memory, all `.env` settings, the same-Wi-Fi requirements, security details, updating, uninstalling and
+troubleshooting.
 
 ## Viewer images (Docker)
 
@@ -148,10 +157,11 @@ text, and it can be imprecise. There are no API keys and no cloud models.
 
 ```bash
 ollama list                              # needs the Ollama app running and qwen2.5:1.5b installed
-docker compose up --build                # backend uses http://host.docker.internal:11434
+docker compose up --build -d             # backend uses http://host.docker.internal:11434
 ```
 
-Configure with `AI_ENABLED`, `AI_PROVIDER=ollama`, `AI_MODEL` and `AI_BASE_URL`; it's off unless `AI_ENABLED=true`.
+Configure with `AI_ENABLED`, `AI_MODEL`, `AI_BASE_URL`, `AI_TIMEOUT` and `AI_MAX_ITERATIONS` (`.env`, see
+`.env.example`). Docker Compose turns it on by default; outside Docker it's off unless `AI_ENABLED=true`.
 Discovery runs and reports don't use it. See [docs/AI_AGENT_MVP.md](docs/AI_AGENT_MVP.md) for the architecture,
 tools, test results and limitations.
 

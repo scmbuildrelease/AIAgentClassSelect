@@ -1,0 +1,5 @@
+# Build context for frontend/Dockerfile: dependencies are installed inside the image, never copied from the Mac.
+node_modules
+build
+.env
+.env.*
