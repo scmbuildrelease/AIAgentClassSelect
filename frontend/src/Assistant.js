@@ -1,69 +1,123 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
+import ActivityCard from "./ActivityCard";
 
-// AI Assistant result panel for the single search box in App.js: the local model's answer, warnings and
-// the real tool trace. Activity cards are rendered by App.js from the tool results, never from model text.
-const TEXT = {
-  en: {
-    heading: "AI Assistant (local model)", thinking: "Asking the local model…", tools: "Tools the model used",
-    none: "No tool was used.",
-    noTools: "The model answered without looking up activities; this answer is not based on the activity data.",
-    stopped: "The model reached the step limit before finishing.", error: "AI assistant error",
-    fallback: "AI assistant unavailable, so these are keyword search results",
-    cards: "Activities below come from the tool results.",
-  },
-  "zh-Hans": {
-    heading: "AI 助手（本地模型）", thinking: "正在询问本地模型…", tools: "模型调用的工具", none: "没有调用工具。",
-    noTools: "模型没有查询活动数据就作答，此回答并非基于活动数据。",
-    stopped: "模型在完成前达到了步骤上限。", error: "AI 助手出错",
-    fallback: "AI 助手不可用，以下为关键词搜索结果", cards: "下方活动来自工具查询结果。",
-  },
-  "zh-Hant": {
-    heading: "AI 助手（本地模型）", thinking: "正在詢問本地模型…", tools: "模型呼叫的工具", none: "沒有呼叫工具。",
-    noTools: "模型沒有查詢活動資料就作答，此回答並非基於活動資料。",
-    stopped: "模型在完成前達到了步驟上限。", error: "AI 助手出錯",
-    fallback: "AI 助手無法使用，以下為關鍵字搜尋結果", cards: "下方活動來自工具查詢結果。",
-  },
-};
+// Chat with the existing AI Agent (POST /agent/chat, local Ollama model with tool calling).
+// The model's text is labelled as an AI-generated summary; activity cards come from the tool results.
+// The agent answers each question on its own; the conversation shown here is kept only while the page is open.
+// The model writes light Markdown. Render only **bold** and [text](http(s) link) as React elements (never as
+// HTML); everything else stays plain text. Links were already limited by the backend to URLs in the activity data.
+const INLINE_RE = /\*\*(.+?)\*\*|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
 
-const box = { border: "1px solid #ccc", borderRadius: 6, padding: 12, marginBottom: 16 };
+export function renderAnswer(text) {
+  const out = [];
+  let last = 0;
+  let m;
+  INLINE_RE.lastIndex = 0;
+  while ((m = INLINE_RE.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    out.push(m[1] !== undefined
+      ? <strong key={m.index}>{m[1]}</strong>
+      : <a key={m.index} href={m[3]} target="_blank" rel="noopener noreferrer">{m[2]}</a>);
+    last = INLINE_RE.lastIndex;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
 
-function Assistant({ lang, result, loading }) {
-  const t = TEXT[lang] || TEXT.en;
-  if (!loading && !result) return null;
-  const detail = result && `${result.agent_status}${result.model ? `, ${result.model}` : ""}`;
-
+function Trace({ result, t }) {
+  const steps = result.tools_used || [];
   return (
-    <section style={box} aria-live="polite">
-      <h2 style={{ fontSize: 18, marginTop: 0 }}>{t.heading}</h2>
-      {loading && <p>{t.thinking}</p>}
-      {result && result.fallback && (
-        <p role="alert" style={{ color: "#8a5a00" }}>{t.fallback} ({detail}): {result.error}</p>
+    <details className="trace">
+      <summary>{t.tools} ({steps.length}{result.model ? ` · ${result.model}` : ""})</summary>
+      {steps.length === 0 ? <p>{t.noToolsRan}</p> : (
+        <ol>
+          {steps.map((s, i) => (
+            <li key={i} className={s.ok ? "" : "bad"}>
+              {t.toolNames[s.tool] || s.tool} <code>{JSON.stringify(s.arguments || {})}</code>
+              {s.ok ? ` → ${s.result_count}` : ` → ${s.error}`}
+              {s.ignored_arguments ? ` (ignored: ${s.ignored_arguments.join(", ")})` : ""}
+            </li>
+          ))}
+        </ol>
       )}
-      {result && !result.fallback && result.error && (
-        <p role="alert" style={{ color: "#b00020" }}>{t.error} ({detail}): {result.error}</p>
+    </details>
+  );
+}
+
+function AssistantMessage({ result, t, savedIds, onToggleSave }) {
+  const failed = !!result.error;
+  return (
+    <div className="msg ai">
+      {failed && <div className="banner error" role="alert">{t.aiError} ({result.agent_status}): {result.error}</div>}
+      {result.agent_status === "no_tools_used" && <div className="banner warn">{t.noTools}</div>}
+      {result.agent_status === "max_iterations" && <div className="banner warn">{t.stopped}</div>}
+      {result.answer && (
+        <div className="bubble">
+          <div className="label">{t.aiAnswer}</div>
+          <div className="answer">{renderAnswer(result.answer)}</div>
+          <div className="label small">{t.aiNote(result.model)}</div>
+        </div>
       )}
-      {result && result.agent_status === "no_tools_used" && <p style={{ color: "#8a5a00" }}>{t.noTools}</p>}
-      {result && result.agent_status === "max_iterations" && <p style={{ color: "#8a5a00" }}>{t.stopped}</p>}
-      {result && result.answer && <div style={{ whiteSpace: "pre-wrap", margin: "12px 0" }}>{result.answer}</div>}
-      {result && !result.fallback && !result.error && (
+      {!failed && (result.activities || []).length > 0 && (
         <>
-          <p style={{ fontSize: 14, color: "#555" }}>{t.cards}</p>
-          <details style={{ fontSize: 14 }}>
-            <summary>{t.tools} ({(result.tools_used || []).length}{result.model ? ` · ${result.model}` : ""})</summary>
-            {(result.tools_used || []).length === 0 ? <p>{t.none}</p> : (
-              <ol>
-                {result.tools_used.map((s, i) => (
-                  <li key={i} style={{ color: s.ok ? undefined : "#b00020" }}>
-                    <code>{s.tool}({JSON.stringify(s.arguments || {})})</code>
-                    {s.ok ? ` → ${s.result_count}` : ` → ${s.error}`}
-                    {s.ignored_arguments ? ` (ignored: ${s.ignored_arguments.join(", ")})` : ""}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </details>
+          <div className="label">{t.fromTools}</div>
+          <div className="cards">
+            {result.activities.map(c => (
+              <ActivityCard key={c.id} c={c} t={t} saved={savedIds.has(c.id)} onToggleSave={onToggleSave} />
+            ))}
+          </div>
         </>
       )}
+      {!failed && <Trace result={result} t={t} />}
+    </div>
+  );
+}
+
+function Assistant({ lang, t, messages, setMessages, savedIds, onToggleSave }) {
+  const [text, setText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const end = useRef(null);
+
+  useEffect(() => {
+    if (end.current && end.current.scrollIntoView) end.current.scrollIntoView({ block: "end" });
+  }, [messages, loading]);
+
+  const send = e => {
+    e.preventDefault();
+    const message = text.trim();
+    if (!message || loading) return;
+    setText("");
+    setLoading(true);
+    setMessages(m => [...m, { role: "user", text: message }]);
+    fetch("/agent/chat", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, lang }),
+    })
+      .then(res => res.json())
+      .catch(err => ({ agent_status: "error", error: String(err), activities: [], tools_used: [] }))
+      .then(result => setMessages(m => [...m, { role: "assistant", result }]))
+      .finally(() => setLoading(false));
+  };
+
+  return (
+    <section className="chat" aria-labelledby="assistant-title">
+      <h2 id="assistant-title" className="visually-hidden">{t.tabs.assistant}</h2>
+      <p className="hint">{t.chatIntro}</p>
+      <div className="messages" aria-live="polite">
+        {messages.map((m, i) => m.role === "user"
+          ? <div key={i} className="msg user"><div className="bubble"><span className="visually-hidden">{t.you}: </span>{m.text}</div></div>
+          : <AssistantMessage key={i} result={m.result} t={t} savedIds={savedIds} onToggleSave={onToggleSave} />)}
+        {loading && <p className="status">{t.thinking}</p>}
+        <div ref={end} />
+      </div>
+      {messages.length > 0 && !loading && (
+        <button type="button" className="link-button" onClick={() => setMessages([])}>{t.clearChat}</button>
+      )}
+      <form className="composer" onSubmit={send}>
+        <input value={text} onChange={e => setText(e.target.value)} placeholder={t.askPlaceholder}
+               aria-label={t.askPlaceholder} enterKeyHint="send" autoComplete="off" maxLength={500} />
+        <button type="submit" className="primary" disabled={loading || !text.trim()}>{t.send}</button>
+      </form>
     </section>
   );
 }
