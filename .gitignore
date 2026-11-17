@@ -208,3 +208,7 @@ __marimo__/
 
 # Generated discovery reports (uploaded as Actions artifacts instead)
 reports/
+
+# Frontend dependencies and macOS metadata
+node_modules/
+.DS_Store

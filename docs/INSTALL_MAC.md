@@ -11,9 +11,15 @@ own independent copy.
 | iPhone / other device on the same Wi-Fi | `http://<Mac LAN IP>:3000`, e.g. `http://192.168.1.23:3000` |
 
 **About the activity data:** the repository includes activities collected for the **San Francisco Bay Area**
-(`data/courses.json`, updated by the project's scheduled discovery runs). Every installation shows that same data.
+(`data/courses.json`, updated when the maintainer runs the discovery workflow; it is not on a schedule). Every
+installation shows that same data; `git pull` gets the latest.
 Tracking activities in another region means adding your own sources and running discovery yourself (see
 "Adding sources, cities, categories, ages" in the [README](../README.md)); that is not covered by this guide.
+
+**What has been tested:** one Apple Silicon Mac (M3, 8 GB, macOS 15.7, Docker Desktop with Engine 28.0.4,
+Ollama 0.40.11, model `qwen2.5:1.5b`), including a clean copy of the repository built without caches in an empty
+environment. Not yet tested: a physical iPhone, a second Mac, an Intel Mac, other macOS versions, and other models.
+If you try one of these, the checklist in [PHASE5_IPHONE_TEST.md](PHASE5_IPHONE_TEST.md) helps.
 
 ## What needs Ollama
 
@@ -207,6 +213,20 @@ can open the app, browse activities and use the AI Assistant, which runs on your
 another device's saved activities or preferences, and the app cannot change the activity data. Use it on a home
 network you trust; run `docker compose down` when you're on a shared network.
 
+A private Wi-Fi password is **not** the same as a login for the app: it keeps strangers off the network, but every
+device and person already on it (family members, guests, a smart TV, a compromised gadget) can use the app. Other
+limitations to be aware of:
+
+- Anyone who can open the app can send AI Assistant questions, which use your Mac's CPU/GPU (each question is
+  limited to 500 characters and `AI_MAX_ITERATIONS` model calls, but there is no rate limit).
+- The frontend is the React **development** server (Create React App 5, which is no longer maintained; `npm audit`
+  reports known issues in its build and dev-server packages). It is fine for a personal app on a trusted network,
+  not for anything public. The app's source code it serves is the same as the public repository.
+- Traffic is plain HTTP on your network, not encrypted.
+
+To use the app only on the Mac itself, set `FRONTEND_BIND=127.0.0.1` in `.env` and run `docker compose up -d`; the
+iPhone can then no longer connect.
+
 | Service | Listens on | Reachable from |
 |---|---|---|
 | Frontend (React development server) | all interfaces, port 3000 (`127.0.0.1` only with `FRONTEND_BIND=127.0.0.1`) | the Mac and the local network |
@@ -215,6 +235,8 @@ network you trust; run `docker compose down` when you're on a shared network.
 
 - Phones never talk to the backend directly. The frontend server forwards the API paths (`/courses`, `/options`,
   `/health`, `/agent/chat`) to `backend:8000` (`frontend/src/setupProxy.js`), so the browser only uses port 3000.
+  Create React App's own `proxy` setting (kept because it enables the Host-header check) also forwards other
+  non-page requests to the backend, which has no other routes and answers them with 404.
 - The backend sends no CORS headers, and API responses through the frontend carry none either, so other websites
   open in a browser cannot read the API. CORS is not an access control, though; the network rules above are.
 - The backend mounts `data/` read-only.

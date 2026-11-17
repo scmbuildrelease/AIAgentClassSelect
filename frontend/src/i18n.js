@@ -38,11 +38,12 @@ export const UI = {
     preferences: "Preferences", language: "Language", childAge: "Child's age", preferredCity: "Preferred city",
     categories: "Favorite categories", prefsNote: "Used as the default Discover filters. Stored in this browser.",
     status: "Status", refresh: "Refresh", backend: "Backend", data: "Activity data", aiAgent: "AI Assistant",
-    ollama: "Ollama (local model)", ok: "Connected", unavailable: "Unavailable", off: "Turned off",
+    ollama: "Ollama (local model)", ok: "Connected", unavailable: "Unavailable", off: "Turned off", notChecked: "Not checked",
     checking: "Checking…", activitiesN: (n, d) => `${n} current activities${d ? `, last checked ${d}` : ""}`,
     privacy: "Privacy", privacyNote: "Saved activities and preferences stay in this browser. " +
              "AI questions are answered by Ollama on the computer running this app.",
     clearSaved: "Clear saved activities",
+    confirmClear: n => `Remove all ${n} saved activities from this browser? This cannot be undone.`,
   },
   "zh-Hans": {
     title: "儿童活动",
@@ -73,10 +74,11 @@ export const UI = {
     preferences: "偏好", language: "语言", childAge: "孩子年龄", preferredCity: "常用城市",
     categories: "喜欢的类别", prefsNote: "作为“发现”页的默认筛选，保存在本浏览器中。",
     status: "状态", refresh: "刷新", backend: "后端", data: "活动数据", aiAgent: "AI 助手",
-    ollama: "Ollama（本地模型）", ok: "已连接", unavailable: "不可用", off: "已关闭", checking: "检查中…",
+    ollama: "Ollama（本地模型）", ok: "已连接", unavailable: "不可用", off: "已关闭", notChecked: "未检查", checking: "检查中…",
     activitiesN: (n, d) => `当前 ${n} 个活动${d ? `，最近检查 ${d}` : ""}`,
     privacy: "隐私", privacyNote: "收藏和偏好只保存在本浏览器中。AI 问题由运行本应用的电脑上的 Ollama 回答。",
     clearSaved: "清空收藏",
+    confirmClear: n => `从此浏览器删除全部 ${n} 个收藏？此操作无法撤销。`,
   },
   "zh-Hant": {
     title: "兒童活動",
@@ -107,10 +109,11 @@ export const UI = {
     preferences: "偏好", language: "語言", childAge: "孩子年齡", preferredCity: "常用城市",
     categories: "喜歡的類別", prefsNote: "作為「探索」頁的預設篩選，儲存在本瀏覽器中。",
     status: "狀態", refresh: "重新整理", backend: "後端", data: "活動資料", aiAgent: "AI 助手",
-    ollama: "Ollama（本地模型）", ok: "已連線", unavailable: "無法使用", off: "已關閉", checking: "檢查中…",
+    ollama: "Ollama（本地模型）", ok: "已連線", unavailable: "無法使用", off: "已關閉", notChecked: "未檢查", checking: "檢查中…",
     activitiesN: (n, d) => `目前 ${n} 個活動${d ? `，最近檢查 ${d}` : ""}`,
     privacy: "隱私", privacyNote: "收藏和偏好只儲存在本瀏覽器中。AI 問題由執行本應用的電腦上的 Ollama 回答。",
     clearSaved: "清除收藏",
+    confirmClear: n => `從此瀏覽器刪除全部 ${n} 個收藏？此操作無法復原。`,
   },
 };
 

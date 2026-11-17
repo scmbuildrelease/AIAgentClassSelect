@@ -1,5 +1,10 @@
 # AI Technology Audit — AIAgentClassSelect
 
+> Snapshot of commit `6ba91c9`; line numbers refer to that commit. Later changes (mobile UI, LAN setup, configuration
+> validation) are described in the [README](../README.md), [INSTALL_MAC.md](INSTALL_MAC.md) and
+> [AI_AGENT_MVP.md](AI_AGENT_MVP.md). The audit's conclusions about the AI technology (local Ollama, tool calling, no
+> RAG, no vector database, no cloud model) still hold.
+
 | | |
 |---|---|
 | Audited state | Commit `6ba91c9` ("Add Real AI Agent", branch `main`), 2026-11-16. The application code in the working tree is identical to that commit; only this document differs. |

@@ -1,10 +1,106 @@
 # AIAgentClassSelect — Kids Activity Discovery & Tracking
 
-A personal tool that checks a curated list of **official** Bay Area provider pages for kids' classes,
-camps and activities (initial target: ages 7–8, South Bay first), keeps a history in this repo, and
-shows what is **new / updated / unchanged / no longer listed** on each run.
+Find kids' classes, camps and activities in the **San Francisco Bay Area**, from your Mac and your iPhone,
+with an optional AI assistant that runs entirely on your own computer.
 
-It runs only when you click **Run workflow** in GitHub Actions. There is no schedule, no paid API and no secrets.
+The project has two parts:
+
+1. **A personal app** you run on your Mac with Docker and open in a browser on the Mac or on an iPhone on the same
+   Wi-Fi. No account, cloud server, paid service, API key, Apple Developer account or App Store app.
+2. **An activity tracker** that checks official provider pages for new and changed activities. It runs when the
+   maintainer starts it in GitHub Actions and commits the results to `data/courses.json`, which the app reads.
+
+Each person who installs the app runs their own independent copy; nothing is shared between installations.
+
+## Features
+
+- **Discover**: search in English or Chinese (机器人 = robotics, 夏令营 = summer camp), filter by category, the
+  child's age, city and dates. Each card shows ages, dates, price and place as the source publishes them ("Not
+  published" otherwise, never guessed) and links to the official page.
+- **AI Assistant** (optional, needs [Ollama](https://ollama.com)): ask in plain English or Chinese, e.g. "Robotics
+  for an 8 year old in San Jose". A local model searches the activity data with tools; the cards it shows come
+  from the data, and its written summary is labelled as AI-generated.
+- **Saved**: keep a list of activities. It is stored in the browser on each device.
+- **Settings**: English, 简体中文 or 繁體中文; the child's age, preferred city and favorite categories as default
+  filters; live status of the backend, data, AI and Ollama.
+- Phone-first layout (bottom tab bar, large touch targets, safe areas, dark mode); tablets and desktops get a top
+  navigation bar.
+
+## How it works
+
+```
+iPhone Safari / Mac browser ──http──▶ frontend :3000 (React, the only port on the network)
+                                         │ same-origin API proxy over the internal Docker network
+                                         ▼
+                                      backend :8000 (Flask; published on the Mac's 127.0.0.1 only)
+                                         │ reads data/courses.json (read-only)
+                                         │ AI Assistant only:
+                                         ▼
+                                      Ollama :11434 on the Mac (127.0.0.1 only), local model e.g. qwen2.5:1.5b
+```
+
+**AI agent.** For each question, the model chooses among four tools: `search_activities`, `filter_by_age`,
+`filter_by_date` and `get_activity_details`. They reuse the app's own search and filters and only read the data. The
+model sees the tool results and writes a short answer. The activity cards and links come from the tool results;
+links in the model's text that are not in the data are removed; each answer shows which searches ran. There is no
+RAG or vector database. Details: [docs/AI_AGENT_MVP.md](docs/AI_AGENT_MVP.md).
+
+**Why Ollama.** It runs open models locally on the Mac (using the Apple Silicon GPU), so questions never leave
+your computer, there are no API keys or usage costs, and nothing depends on an online AI service. The trade-off is that a small model that fits on an 8 GB Mac writes less reliable prose than large cloud
+models; that is why the facts on the cards never come from the model's text.
+
+## Install and run (Mac + iPhone)
+
+```bash
+git clone https://github.com/scmbuildrelease/AIAgentClassSelect.git && cd AIAgentClassSelect
+cp .env.example .env                          # optional: ports, AI model, AI on/off
+ollama pull qwen2.5:1.5b                      # optional: only for the AI Assistant (needs the Ollama app)
+docker compose up --build -d                  # then open http://localhost:3000 on the Mac
+ipconfig getifaddr en0                        # the Mac's LAN IP (en1 on some Macs); it can change
+# iPhone Safari, same Wi-Fi:  http://<that IP>:3000
+docker compose down                           # stop
+```
+
+Requirements: Docker Desktop for Mac (Apple Silicon or Intel). Ollama is needed only for the AI Assistant;
+Discover, Saved and Settings work without it. **[docs/INSTALL_MAC.md](docs/INSTALL_MAC.md)** is the complete guide:
+prerequisites, choosing a model by Mac memory, every `.env` setting, the iPhone and same-Wi-Fi requirements,
+security, updating, uninstalling and troubleshooting.
+
+**Network and privacy.** Only the frontend (port 3000) is reachable from the network; the backend
+(`127.0.0.1:8000`) and Ollama (`127.0.0.1:11434`) are not. **There is no login:** anyone on the same Wi-Fi who can
+reach port 3000 can use the app, and a Wi-Fi password is not a substitute for one. Set `FRONTEND_BIND=127.0.0.1`
+to allow only the Mac itself. Saved activities and preferences stay in each device's browser. Don't port-forward
+the app to the internet.
+
+## Current limitations
+
+- **Bay Area only.** The included data covers the San Francisco Bay Area. Other regions need new sources (see
+  [Adding sources](#adding-sources-cities-categories-ages)) and a discovery run.
+- **Data freshness** depends on when the discovery workflow was last run (Settings shows the last check date).
+- **The AI summary can be wrong** (the tested `qwen2.5:1.5b` sometimes misses a filter, mistranslates names, or
+  answers a Traditional Chinese question in Simplified Chinese). Trust the cards and official pages.
+- **No accounts or sync.** Saved activities are per browser and device.
+- **Development web server.** The frontend runs on the Create React App development server, which is no longer
+  maintained; fine for a trusted home network, not for public hosting.
+- **Testing so far:** one Apple Silicon Mac (macOS 15.7), with phone and tablet sizes checked in a desktop browser.
+  A physical iPhone, a second Mac and Intel Macs have not been tested yet
+  ([docs/PHASE5_IPHONE_TEST.md](docs/PHASE5_IPHONE_TEST.md)).
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [docs/INSTALL_MAC.md](docs/INSTALL_MAC.md) | Installation, iPhone access, security, troubleshooting |
+| [docs/AI_AGENT_MVP.md](docs/AI_AGENT_MVP.md) | AI agent design, tools, configuration, limitations |
+| [docs/PHASE5_IPHONE_TEST.md](docs/PHASE5_IPHONE_TEST.md) | Manual acceptance checklist (iPhone, second Mac) |
+| [docs/AI_TECHNOLOGY_AUDIT.md](docs/AI_TECHNOLOGY_AUDIT.md) | Audit of the AI technology (snapshot) |
+
+# Activity tracker
+
+The tracker checks a curated list of **official** Bay Area provider pages (initial target: ages 7–8, South Bay
+first), keeps a history in this repo, and shows what is **new / updated / unchanged / no longer listed** on each
+run. It runs only when you click **Run workflow** in GitHub Actions. There is no schedule, no paid API and no
+secrets.
 
 ## How to use it (GitHub)
 
@@ -106,38 +202,9 @@ python -m activity_tracker --config-dir tests/fixtures/config --data-dir /tmp/de
 python -m activity_tracker --min-age 7 --max-age 8 --mode refresh_known_sources
 ```
 
-## Personal edition: Mac and iPhone
-
-The viewer app has four sections: **Discover** (search and filters), **AI Assistant**, **Saved** and **Settings**.
-It is laid out for phones first (iPhone 15 Pro Max and smaller) and also works on tablets and desktops.
-To run it on your Mac and open it from an iPhone on the same Wi-Fi:
-
-```bash
-git clone https://github.com/scmbuildrelease/AIAgentClassSelect.git && cd AIAgentClassSelect
-cp .env.example .env                          # optional: ports, AI model, AI on/off
-ollama pull qwen2.5:1.5b                      # optional: only for the AI Assistant (needs the Ollama app)
-docker compose up --build -d                  # then open http://localhost:3000 on the Mac
-ipconfig getifaddr en0                        # the Mac's LAN IP (en1 on some Macs); it can change
-# iPhone Safari, same Wi-Fi:  http://<that IP>:3000
-docker compose down                           # stop
-```
-
-Requirements: Docker Desktop for Mac (Apple Silicon or Intel). Ollama is needed only for the AI Assistant;
-Discover, Saved and Settings work without it. No accounts, API keys, cloud services or App Store app.
-The included activity data covers the San Francisco Bay Area.
-
-Only the frontend (port 3000) is reachable from the network. The backend is published on the Mac's
-`127.0.0.1:8000` only, and the frontend reaches it over the internal Docker network. Ollama stays on the Mac's
-`127.0.0.1:11434`. **There is no login:** anyone on the same Wi-Fi who can reach port 3000 can use the app.
-Saved activities and preferences stay in each device's browser. Don't port-forward it to the internet.
-
-[docs/INSTALL_MAC.md](docs/INSTALL_MAC.md) covers step-by-step installation on another Mac, choosing a model by
-Mac memory, all `.env` settings, the same-Wi-Fi requirements, security details, updating, uninstalling and
-troubleshooting.
-
 ## Viewer images (Docker)
 
-The optional backend/frontend viewer is published by `.github/workflows/docker-build.yml` as multi-platform
+The app's backend/frontend images are also published by `.github/workflows/docker-build.yml` as multi-platform
 images for **linux/amd64 and linux/arm64** (Apple Silicon pulls arm64 automatically):
 
 ```bash
@@ -147,24 +214,6 @@ docker buildx imagetools inspect ghcr.io/<owner>/aiagentclassselect-backend:late
 docker compose up --build                                                             # or build locally
 ```
 
-## AI Assistant (optional, local)
-
-The viewer has an **AI Assistant** panel (`POST /agent/chat`). A local Qwen model running in
-[Ollama](https://ollama.com) on your machine chooses among four tools: `search_activities`, `filter_by_age`,
-`filter_by_date` and `get_activity_details`. These reuse the tracker's own search and filters and only read
-`data/courses.json`. Activity cards and links come from the tool results. The model only writes the summary
-text, and it can be imprecise. There are no API keys and no cloud models.
-
-```bash
-ollama list                              # needs the Ollama app running and qwen2.5:1.5b installed
-docker compose up --build -d             # backend uses http://host.docker.internal:11434
-```
-
-Configure with `AI_ENABLED`, `AI_MODEL`, `AI_BASE_URL`, `AI_TIMEOUT` and `AI_MAX_ITERATIONS` (`.env`, see
-`.env.example`). Docker Compose turns it on by default; outside Docker it's off unless `AI_ENABLED=true`.
-Discovery runs and reports don't use it. See [docs/AI_AGENT_MVP.md](docs/AI_AGENT_MVP.md) for the architecture,
-tools, test results and limitations.
-
 ## Layout
 
 ```
@@ -172,7 +221,8 @@ activity_tracker/   fetcher (robots.txt, delays, retries) · extract · tracker 
 config/             settings.json, sources.json  (edit these)
 data/               sources.json, courses.json, candidate_sources.json  (written by runs; committed)
 tests/              offline tests and HTML fixtures
-backend/, frontend/ optional small viewer that reads data/courses.json
+backend/, frontend/ the personal app (Flask API + React UI) that reads data/courses.json
+docs/               installation, AI agent, test checklist
 ```
 
 ## Politeness

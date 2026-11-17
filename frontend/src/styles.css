@@ -1,9 +1,10 @@
 /* Mobile-first layout (iPhone first), with a desktop layout from 768px. No CSS framework.
    Form controls use >= 16px text so iOS Safari does not zoom in; touch targets are >= 44px;
-   env(safe-area-inset-*) keeps content clear of the notch and home indicator (viewport-fit=cover). */
+   env(safe-area-inset-*) keeps content clear of the notch and home indicator (viewport-fit=cover).
+   Text and white-on-accent fills meet WCAG AA contrast (4.5:1) in both color schemes. */
 :root {
   --bg: #f2f2f7; --card: #ffffff; --text: #1c1c1e; --muted: #6e6e73; --border: rgba(60, 60, 67, 0.18);
-  --accent: #007aff; --accent-soft: rgba(0, 122, 255, 0.12); --on-accent: #ffffff;
+  --accent: #0066d6; --accent-fill: #0066d6; --accent-soft: rgba(0, 102, 214, 0.12); --on-accent: #ffffff;
   --danger: #d70015; --danger-soft: rgba(255, 59, 48, 0.12); --warn-soft: rgba(255, 204, 0, 0.22);
   --ok: #1f7a34; --ok-soft: rgba(52, 199, 89, 0.16); --bar: rgba(249, 249, 251, 0.92);
   --tabbar-height: 56px;
@@ -14,7 +15,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #000000; --card: #1c1c1e; --text: #f2f2f7; --muted: #98989f; --border: rgba(84, 84, 88, 0.65);
-    --accent: #0a84ff; --accent-soft: rgba(10, 132, 255, 0.2); --danger: #ff6961; --danger-soft: rgba(255, 69, 58, 0.18);
+    --accent: #0a84ff; --accent-fill: #0071e3; --accent-soft: rgba(10, 132, 255, 0.2); --danger: #ff6961; --danger-soft: rgba(255, 69, 58, 0.18);
     --warn-soft: rgba(255, 214, 10, 0.18); --ok: #30d158; --ok-soft: rgba(48, 209, 88, 0.18); --bar: rgba(22, 22, 24, 0.92);
   }
 }
@@ -87,7 +88,7 @@ input[type="date"] { -webkit-appearance: none; appearance: none; display: block;
 .primary, .secondary {
   min-height: 44px; padding: 0 18px; border-radius: 10px; font-weight: 600; white-space: nowrap;
 }
-.primary { border: 0; background: var(--accent); color: var(--on-accent); }
+.primary { border: 0; background: var(--accent-fill); color: var(--on-accent); }
 .secondary { border: 1px solid var(--border); background: var(--card); color: var(--accent); }
 .secondary.danger { color: var(--danger); margin: 8px 0 12px; }
 .wide { width: 100%; margin-top: 12px; }
@@ -102,7 +103,7 @@ input[type="date"] { -webkit-appearance: none; appearance: none; display: block;
   flex: none; min-height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid var(--border);
   background: var(--card); font-size: 15px;
 }
-.chip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.chip.on { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--on-accent); }
 
 .filters { margin: 8px 0; padding: 0 12px; border-radius: 12px; background: var(--card); }
 .filters summary { min-height: 44px; display: flex; align-items: center; font-weight: 600; cursor: pointer; }
@@ -147,7 +148,7 @@ input[type="date"] { -webkit-appearance: none; appearance: none; display: block;
 /* ---------- AI Assistant ---------- */
 .messages { display: flex; flex-direction: column; gap: 14px; }
 .msg.user { align-self: flex-end; max-width: 85%; }
-.msg.user .bubble { padding: 10px 14px; border-radius: 18px 18px 4px 18px; background: var(--accent); color: var(--on-accent); overflow-wrap: anywhere; }
+.msg.user .bubble { padding: 10px 14px; border-radius: 18px 18px 4px 18px; background: var(--accent-fill); color: var(--on-accent); overflow-wrap: anywhere; }
 .msg.ai { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .msg.ai .bubble { padding: 12px 14px; border-radius: 18px 18px 18px 4px; background: var(--card); }
 .answer { white-space: pre-wrap; overflow-wrap: anywhere; }

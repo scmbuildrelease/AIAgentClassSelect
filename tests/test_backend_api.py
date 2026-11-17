@@ -70,6 +70,7 @@ def test_courses_filters(client, query, expected):
     ("age=40", "age must be a whole number"),
     ("from=next-friday", "Invalid isoformat"),
     ("from=2026-12-31&to=2026-12-01", "'to' is before 'from'"),
+    ("category=robots", "unknown category 'robots'"),
 ])
 def test_courses_filter_errors(client, query, error):
     r = client.get(f"/courses?{query}")
@@ -94,6 +95,20 @@ def test_health_reports_unreachable_ollama(client, monkeypatch):
     monkeypatch.setenv("AI_BASE_URL", "http://127.0.0.1:9")  # nothing listens on port 9
     ai = client.get("/health").get_json()["ai"]
     assert ai["enabled"] and ai["ollama"] == "unavailable" and "no Ollama server is reachable" in ai["error"]
+
+
+def test_health_reports_invalid_ai_settings_without_failing(client, monkeypatch):
+    monkeypatch.setenv("AI_ENABLED", "true")
+    monkeypatch.setenv("AI_TIMEOUT", "abc")
+    r = client.get("/health")
+    ai = r.get_json()["ai"]
+    assert r.status_code == 200 and r.get_json()["backend"] == "ok"
+    assert ai["ollama"] == "not_checked" and "invalid AI configuration: AI_TIMEOUT must be" in ai["error"]
+
+
+def test_empty_results_are_an_empty_list(client):
+    assert ids(client, "q=underwater basket weaving") == []
+    assert ids(client, "city=Gilroy") == []
 
 
 def test_health_without_data_file(client, monkeypatch, tmp_path):

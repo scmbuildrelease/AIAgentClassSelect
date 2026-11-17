@@ -59,6 +59,8 @@ def filter_courses(courses, args, settings):
         here = location_matcher(args["city"], Config(settings, [], []).cities)
         courses = [c for c in courses if here(c)] if here else courses
     if args.get("category"):
+        if args["category"] not in settings.get("categories", {}):
+            raise ValueError(f"unknown category {args['category']!r}")
         courses = [c for c in courses if args["category"] in (c.get("categories") or [])]
     if args.get("from") or args.get("to"):
         start = date.fromisoformat(args.get("from") or args["to"])  # ValueError: not YYYY-MM-DD
@@ -129,7 +131,9 @@ def health():
             data.update(available=False, error=f"data file unreadable: {e}")
     cfg = AgentSettings.from_env()
     ai = {"enabled": cfg.enabled, "provider": cfg.provider, "model": cfg.model, "ollama": "not_checked", "error": None}
-    if cfg.enabled:
+    if cfg.enabled and cfg.error:
+        ai["error"] = f"invalid AI configuration: {cfg.error}"  # Ollama is not checked; the assistant won't run
+    elif cfg.enabled:
         try:
             OllamaClient(cfg.base_url, cfg.model, timeout=3).check_model()  # lists models; runs no model
             ai["ollama"] = "ok"
@@ -143,14 +147,14 @@ def agent_chat():
     """Kids Activity AI Agent: {"message": "...", "lang": "en"} -> answer, activities, tools_used,
     agent_status, model, error. Uses the local Ollama model (AI_* environment variables); read-only."""
     body = request.get_json(silent=True) or {}
+    lang = body.get("lang") if isinstance(body.get("lang"), str) else "en"
     try:
         settings = load_settings()
         courses, today = load_courses(settings) if os.path.exists(DATA_FILE) else ([], local_today())
-        result, status = handle_chat(body.get("message"), courses, settings, today)
+        result, status = handle_chat(body.get("message"), courses, settings, today, lang=lang)
     except Exception as e:
         return jsonify({"answer": None, "activities": [], "tools_used": [], "agent_status": "error",
                         "model": os.getenv("AI_MODEL"), "error": str(e)}), 500
-    lang = body.get("lang") if isinstance(body.get("lang"), str) else "en"
     return jsonify({**result, "activities": [course_item(c, lang) for c in result["activities"]]}), status
 
 

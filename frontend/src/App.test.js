@@ -19,7 +19,7 @@ const AI_OK = {
 const HEALTH = { backend: "ok", data: { available: true, activities: 589, last_checked: "2026-11-16T04:29:53Z" },
                  ai: { enabled: true, provider: "ollama", model: "qwen2.5:1.5b", ollama: "ok", error: null } };
 
-let container, root, calls, agentReply, coursesReply;
+let container, root, calls, agentReply, coursesReply, health;
 
 function reply(body, ok = true) {
   return Promise.resolve({ ok, json: () => Promise.resolve(body) });
@@ -28,7 +28,7 @@ function reply(body, ok = true) {
 function mockFetch(url, options = {}) {
   calls.push({ url, options });
   if (url === "/agent/chat") return reply(agentReply);
-  if (url === "/health") return reply(HEALTH);
+  if (url === "/health") return reply(health);
   if (url === "/options") {
     return reply({ categories: { stem: { label: "Math, Science, STEM & Coding", short: "STEM" },
                                  language: { label: "Chinese & Language Classes", short: "Language" } },
@@ -89,6 +89,7 @@ beforeEach(async () => {
   calls = [];
   agentReply = AI_OK;
   coursesReply = null;
+  health = HEALTH;
   global.fetch = jest.fn(mockFetch);
   window.localStorage.clear();
   await mount();
@@ -202,4 +203,100 @@ test("Settings: live status, language and preferences used by Discover", async (
   expect($("h1").textContent).toBe("儿童活动");
   expect(tabButton("发现")).toBeTruthy();
   expect(courseCalls().pop()).toBe("/courses?lang=zh-Hans&q=&age=8");
+});
+
+async function remount() {
+  act(() => root.unmount());
+  container.remove();
+  await mount();
+}
+
+async function ask(question) {
+  await click(tabButton("AI Assistant"));
+  await typeInto(visible(".composer input")[0], question);
+  await submit(visible(".composer")[0]);
+}
+
+test("Saved keeps showing an activity that is no longer listed, with a note", async () => {
+  window.localStorage.setItem("aiacs.saved", JSON.stringify([{ id: "gone", name: "Spring Pottery 2025",
+    provider: "Clay Studio", link: "https://clay.example.org/", savedAt: "2025-03-01T10:00:00.000Z" }]));
+  await remount();
+  await click(tabButton("Saved"));
+  expect(courseCalls()).toContain("/courses?lang=en&all=1");
+  expect(cardNames()).toEqual(["Spring Pottery 2025"]);
+  expect(visible(".note")[0].textContent).toBe("No longer listed or already past; showing what you saved. · Saved 2025-03-01");
+});
+
+test("Clear saved asks first and only clears when confirmed", async () => {
+  await click(visible(".save")[0]);
+  await click(tabButton("Settings"));
+  const clear = () => visible(".secondary.danger")[0];
+  window.confirm = jest.fn(() => false);
+  await click(clear());
+  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("Remove all 1 saved activities"));
+  expect(JSON.parse(window.localStorage.getItem("aiacs.saved"))).toHaveLength(1);
+  window.confirm = jest.fn(() => true);
+  await click(clear());
+  expect(JSON.parse(window.localStorage.getItem("aiacs.saved"))).toEqual([]);
+  expect(visible(".secondary.danger")).toHaveLength(0);
+});
+
+test("Traditional Chinese interface, remembered after reload, and sent to the AI", async () => {
+  await click(tabButton("Settings"));
+  await choose(visible(".row select")[0], "zh-Hant");
+  expect($("h1").textContent).toBe("兒童活動");
+  expect(document.documentElement.lang).toBe("zh-Hant");
+  calls = [];
+  await remount();
+  expect(tabButton("探索").getAttribute("aria-current")).toBeNull();  // still on Settings after reload
+  expect(courseCalls()[0]).toBe("/courses?lang=zh-Hant&q=");
+  await click(tabButton("AI 助手"));
+  await typeInto(visible(".composer input")[0], "聖荷西的機器人課程");
+  await submit(visible(".composer")[0]);
+  expect(JSON.parse(calls.find(c => c.url === "/agent/chat").options.body).lang).toBe("zh-Hant");
+  expect(visible(".msg.ai .bubble")[0].textContent).toContain("AI 生成的摘要");
+});
+
+test("links that are not http(s) are never rendered", async () => {
+  coursesReply = () => reply([{ id: "x", name: "Bad link", link: "javascript:alert(1)", display: { name: "Bad link" } }]);
+  await typeInto(visible('input[type="search"]')[0], "bad");
+  await submit(visible("form.searchbar")[0]);
+  expect(visible(".card-title")[0].tagName).toBe("SPAN");
+  expect(visible(".card a")).toHaveLength(0);
+});
+
+test("Discover says so when nothing matches", async () => {
+  coursesReply = () => reply([]);
+  await typeInto(visible('input[type="search"]')[0], "underwater basket weaving");
+  await submit(visible("form.searchbar")[0]);
+  expect(cardNames()).toEqual([]);
+  expect(visible(".status")[0].textContent).toBe("No matching activities.");
+});
+
+test("AI Assistant warns when the model used no tools or hit the step limit", async () => {
+  agentReply = { ...AI_OK, agent_status: "no_tools_used", tools_used: [], activities: [], answer: "Try LEGO camps." };
+  await ask("robotics");
+  expect(visible(".msg.ai .banner.warn")[0].textContent).toContain("not based on the activity data");
+  agentReply = { ...AI_OK, agent_status: "max_iterations", answer: "The assistant stopped after 5 model calls." };
+  await typeInto(visible(".composer input")[0], "robotics again");
+  await submit(visible(".composer")[0]);
+  expect(visible(".msg.ai .banner.warn")[1].textContent).toContain("step limit");
+  expect(visible(".msg.ai")[1].querySelectorAll(".card")).toHaveLength(1);  // cards still come from tool results
+});
+
+test("Settings shows Ollama problems and invalid AI settings", async () => {
+  health = { ...HEALTH, ai: { ...HEALTH.ai, ollama: "unavailable", error: "no Ollama server is reachable at http://host.docker.internal:11434" } };
+  await click(tabButton("Settings"));
+  const refresh = () => click(visible(".group .secondary").find(b => b.textContent === "Refresh"));
+  await refresh();  // Settings checked /health when the app started
+  let rows = visible(".status-row").map(r => r.textContent);
+  expect(rows[2]).toContain("AI AssistantConnected");
+  expect(rows[3]).toContain("Unavailable");
+  expect(rows[3]).toContain("no Ollama server is reachable");
+  health = { ...HEALTH, ai: { ...HEALTH.ai, ollama: "not_checked", error: "invalid AI configuration: AI_TIMEOUT must be a number" } };
+  await refresh();
+  rows = visible(".status-row").map(r => r.textContent);
+  expect(rows[2]).toContain("Unavailable");
+  expect(rows[2]).toContain("AI_TIMEOUT must be a number");
+  expect(rows[3]).toContain("Not checked");
 });

@@ -27,6 +27,8 @@ from .search import Glossary, search
 DEFAULT_MODEL = "qwen2.5:1.5b"  # small tool-calling model (~1 GB) that runs on an 8 GB Mac; pull it with Ollama
 DEFAULT_BASE_URL = "http://localhost:11434"
 MAX_ITERATIONS = 5             # model calls per request
+MAX_ITERATIONS_LIMIT = 20      # highest accepted AI_MAX_ITERATIONS
+MAX_TIMEOUT = 3600             # highest accepted AI_TIMEOUT (seconds per model call)
 MAX_TOOL_CALLS_PER_STEP = 4
 MAX_MESSAGE_CHARS = 500
 RESULT_LIMIT = 8               # activities sent back to the model per tool result
@@ -60,6 +62,9 @@ Rules:
 - Final answer: list up to 5 activities by name with provider, ages, dates and price exactly as the tool results
   give them ("not published" when missing). Answer in the same language as the user. Be brief."""
 NUDGE = "Use the tools to look up activities before answering. Do not answer from memory."
+# The app's display language; English keeps "same language as the user" (a parent may type Chinese there).
+ANSWER_SCRIPT = {"zh-Hans": "Write the final answer in Simplified Chinese (简体中文).",
+                 "zh-Hant": "Write the final answer in Traditional Chinese (繁體中文), not Simplified Chinese."}
 
 
 def _tool(name: str, description: str, properties: dict, required: list[str]) -> dict:
@@ -101,16 +106,35 @@ class AgentSettings:
     base_url: str
     timeout: float
     max_iterations: int
+    error: str | None = None  # invalid AI_TIMEOUT / AI_MAX_ITERATIONS: the assistant refuses to run
 
     @classmethod
     def from_env(cls, env=None) -> "AgentSettings":
         env = os.environ if env is None else env
+        errors = []
+        raw_timeout = env.get("AI_TIMEOUT") or "120"
+        raw_iterations = env.get("AI_MAX_ITERATIONS") or str(MAX_ITERATIONS)
+        try:
+            timeout = float(raw_timeout)
+            if not 0 < timeout <= MAX_TIMEOUT:  # also rejects nan and inf
+                raise ValueError
+        except ValueError:
+            timeout = 120.0
+            errors.append(f"AI_TIMEOUT must be a number of seconds above 0 and at most {MAX_TIMEOUT}, "
+                          f"not {raw_timeout!r}")
+        try:
+            max_iterations = int(raw_iterations)
+            if not 1 <= max_iterations <= MAX_ITERATIONS_LIMIT:
+                raise ValueError
+        except ValueError:
+            max_iterations = MAX_ITERATIONS
+            errors.append(f"AI_MAX_ITERATIONS must be a whole number from 1 to {MAX_ITERATIONS_LIMIT}, "
+                          f"not {raw_iterations!r}")
         return cls(enabled=(env.get("AI_ENABLED") or "").strip().lower() in ("1", "true", "yes"),
                    provider=(env.get("AI_PROVIDER") or "ollama").strip().lower(),
                    model=env.get("AI_MODEL") or DEFAULT_MODEL,
                    base_url=(env.get("AI_BASE_URL") or DEFAULT_BASE_URL).rstrip("/"),
-                   timeout=float(env.get("AI_TIMEOUT") or 120),
-                   max_iterations=int(env.get("AI_MAX_ITERATIONS") or MAX_ITERATIONS))
+                   timeout=timeout, max_iterations=max_iterations, error="; ".join(errors) or None)
 
 
 class OllamaClient:
@@ -158,7 +182,7 @@ class OllamaClient:
             r = self.session.post(f"{self.base_url}/api/embed", json={"model": model, "input": texts},
                                   timeout=self.timeout)
         except requests.Timeout:
-            raise OllamaError(f"embedding model {model!r} did not answer within {self.timeout:.0f}s") from None
+            raise OllamaError(f"embedding model {model!r} did not answer within {self.timeout:g} seconds") from None
         except requests.RequestException:
             raise self._unreachable() from None
         try:
@@ -177,10 +201,15 @@ class OllamaClient:
         try:
             r = self.session.post(f"{self.base_url}/api/chat", json=payload, timeout=self.timeout)
         except requests.Timeout:
-            raise OllamaError(f"model {self.model!r} did not answer within {self.timeout:.0f}s") from None
+            raise OllamaError(f"model {self.model!r} did not answer within {self.timeout:g} seconds (AI_TIMEOUT); "
+                              "try again, use a smaller model or raise AI_TIMEOUT") from None
         except requests.RequestException:
             raise self._unreachable() from None
         if r.status_code != 200:
+            if "does not support tools" in r.text:
+                raise OllamaError(f"model {self.model!r} does not support tool calling, which the AI Assistant needs; "
+                                  "set AI_MODEL to a tool-calling model (for example from the qwen2.5 family) and "
+                                  "download it with `ollama pull`")
             raise OllamaError(f"Ollama returned HTTP {r.status_code}: {r.text[:200]}")
         try:
             message = r.json().get("message")
@@ -413,26 +442,31 @@ def clean_answer(text: str | None, known_urls: set[str]) -> str:
                       else "[link removed: not in the activity data]", text)
 
 
-def run_agent(message: str, tools: ActivityTools, client: OllamaClient, max_iterations: int = MAX_ITERATIONS) -> dict:
+def run_agent(message: str, tools: ActivityTools, client: OllamaClient, max_iterations: int = MAX_ITERATIONS,
+              lang: str | None = None) -> dict:
     """The tool-calling loop. The model decides which tools to call and when to answer."""
-    messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT.format(today=tools.today.isoformat(),
-                                                                    categories=", ".join(tools.categories))},
-                {"role": "user", "content": message}]
+    system = SYSTEM_PROMPT.format(today=tools.today.isoformat(), categories=", ".join(tools.categories))
+    if lang in ANSWER_SCRIPT:
+        system += "\n- " + ANSWER_SCRIPT[lang]
+    messages: list[dict[str, Any]] = [{"role": "system", "content": system}, {"role": "user", "content": message}]
     trace: list[dict] = []
     nudged = False
     latest_list: dict | None = None  # the model sees only the newest search/filter result in full
     for _ in range(max_iterations):
         reply = client.chat(messages, TOOL_DEFINITIONS)
         calls = reply.get("tool_calls") or []
+        if not isinstance(calls, list):
+            raise OllamaError(f"the model returned malformed tool calls ({type(calls).__name__}, not a list)")
+        content = reply.get("content") if isinstance(reply.get("content"), str) else ""
         if not calls:
             if not trace and not nudged:  # answered from memory: ask once to use the tools instead
                 nudged = True
-                messages += [{"role": "assistant", "content": reply.get("content") or ""},
+                messages += [{"role": "assistant", "content": content},
                              {"role": "user", "content": NUDGE}]
                 continue
-            return {"answer": clean_answer(reply.get("content"), tools.known_urls()), "activities": tools.shown(),
+            return {"answer": clean_answer(content, tools.known_urls()), "activities": tools.shown(),
                     "tools_used": trace, "agent_status": OK if trace else NO_TOOLS_USED}
-        messages.append({"role": "assistant", "content": reply.get("content") or "", "tool_calls": calls})
+        messages.append({"role": "assistant", "content": content, "tool_calls": calls})
         for call in calls[:MAX_TOOL_CALLS_PER_STEP]:
             entry, result = tools.execute(call)
             trace.append(entry)
@@ -454,7 +488,7 @@ def run_agent(message: str, tools: ActivityTools, client: OllamaClient, max_iter
 
 
 def handle_chat(message, courses: list[dict], settings: dict, today: date, env=None,
-                session: requests.Session | None = None) -> tuple[dict, int]:
+                session: requests.Session | None = None, lang: str | None = None) -> tuple[dict, int]:
     """POST /agent/chat: (response body without display formatting, HTTP status)."""
     cfg = AgentSettings.from_env(env)
     base: dict[str, Any] = {"answer": None, "activities": [], "tools_used": [], "agent_status": None,
@@ -468,10 +502,13 @@ def handle_chat(message, courses: list[dict], settings: dict, today: date, env=N
     if cfg.provider != "ollama":
         return {**base, "agent_status": DISABLED,
                 "error": f"AI_PROVIDER={cfg.provider!r} is not supported; only the local 'ollama' provider is."}, 503
+    if cfg.error:
+        return {**base, "agent_status": ERROR, "error": f"Invalid AI configuration: {cfg.error}"}, 503
     try:
         client = OllamaClient(cfg.base_url, cfg.model, cfg.timeout, session)
         client.check_model()
-        result = run_agent(message.strip(), ActivityTools(courses, settings, today), client, cfg.max_iterations)
+        result = run_agent(message.strip(), ActivityTools(courses, settings, today), client, cfg.max_iterations,
+                           lang)
     except OllamaError as e:
         return {**base, "agent_status": UNAVAILABLE, "error": f"Local AI model unavailable: {e}"}, 503
     return {**base, **result}, 200

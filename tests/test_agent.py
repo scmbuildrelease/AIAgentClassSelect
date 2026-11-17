@@ -212,6 +212,90 @@ def test_disabled_or_unsupported_configuration(env, status, error):
     assert code == 503 and body["agent_status"] == status and error in body["error"]
 
 
+@pytest.mark.parametrize("extra, error", [
+    ({"AI_TIMEOUT": "abc"}, "AI_TIMEOUT must be a number of seconds above 0 and at most 3600, not 'abc'"),
+    ({"AI_TIMEOUT": "0"}, "AI_TIMEOUT must be"),
+    ({"AI_TIMEOUT": "nan"}, "AI_TIMEOUT must be"),
+    ({"AI_MAX_ITERATIONS": "0"}, "AI_MAX_ITERATIONS must be a whole number from 1 to 20, not '0'"),
+    ({"AI_MAX_ITERATIONS": "2.5"}, "AI_MAX_ITERATIONS must be"),
+])
+def test_invalid_numeric_settings_are_reported_and_ollama_is_not_called(extra, error):
+    fake = FakeOllama([])
+    body, code = handle_chat("robotics", COURSES, SETTINGS, TODAY, env={**ENV, **extra}, session=fake)
+    assert code == 503 and body["agent_status"] == "error" and error in body["error"]
+    assert fake.requests == [] and body["activities"] == [] and body["answer"] is None
+
+
+@pytest.mark.parametrize("lang, expected", [
+    ("zh-Hant", "Traditional Chinese (繁體中文)"), ("zh-Hans", "Simplified Chinese (简体中文)"),
+    ("en", None), (None, None)])
+def test_display_language_sets_the_answer_script(lang, expected):
+    fake = FakeOllama([tool_reply(call("search_activities", keyword="robotics")), answer("…")])
+    handle_chat("機器人課程", COURSES, SETTINGS, TODAY, env=ENV, session=fake, lang=lang)
+    system = fake.requests[0]["messages"][0]["content"]
+    assert (expected in system) if expected else ("Write the final answer in" not in system)
+
+
+def test_valid_numeric_settings_are_used():
+    cfg = agent.AgentSettings.from_env({**ENV, "AI_TIMEOUT": "300", "AI_MAX_ITERATIONS": "2"})
+    assert (cfg.timeout, cfg.max_iterations, cfg.error) == (300.0, 2, None)
+
+
+class RaisingOllama(FakeOllama):
+    def __init__(self, error):
+        super().__init__([])
+        self.error = error
+
+    def post(self, url, json, timeout):
+        self.requests.append(json)
+        raise self.error
+
+
+def test_model_timeout_reports_the_configured_limit():
+    fake = RaisingOllama(requests.Timeout())
+    body, code = handle_chat("robotics", COURSES, SETTINGS, TODAY, env={**ENV, "AI_TIMEOUT": "2.5"}, session=fake)
+    assert code == 503 and body["agent_status"] == "unavailable" and len(fake.requests) == 1
+    assert "did not answer within 2.5 seconds (AI_TIMEOUT)" in body["error"] and body["answer"] is None
+
+
+class StatusOllama(FakeOllama):
+    def __init__(self, status, body):
+        super().__init__([])
+        self.status, self.body = status, body
+
+    def post(self, url, json, timeout):
+        return Resp(self.status, self.body)
+
+
+def test_model_without_tool_support_says_so():
+    fake = StatusOllama(400, {"error": "registry.ollama.ai/library/gemma:2b does not support tools"})
+    body, code = handle_chat("robotics", COURSES, SETTINGS, TODAY, env=ENV, session=fake)
+    assert code == 503 and "does not support tool calling" in body["error"] and "AI_MODEL" in body["error"]
+
+
+@pytest.mark.parametrize("status, reply, error", [
+    (500, {"error": "llama runner process has terminated"}, "Ollama returned HTTP 500"),
+    (200, "not a dict", "response without a message"),
+    (200, {"message": "text instead of an object"}, "response without a message"),
+])
+def test_unexpected_ollama_responses_are_errors_not_answers(status, reply, error):
+    body, code = handle_chat("robotics", COURSES, SETTINGS, TODAY, env=ENV, session=StatusOllama(status, reply))
+    assert code == 503 and body["agent_status"] == "unavailable" and error in body["error"]
+    assert body["answer"] is None and body["activities"] == []
+
+
+def test_malformed_tool_calls_are_an_error():
+    body, status, _ = chat([{"role": "assistant", "content": "", "tool_calls": {"function": "search_activities"}}])
+    assert status == 503 and "malformed tool calls (dict, not a list)" in body["error"] and body["answer"] is None
+
+
+def test_non_text_content_is_ignored_not_shown():
+    body, status, _ = chat([tool_reply(call("search_activities", keyword="robotics")),
+                            {"role": "assistant", "content": ["not", "text"]}])
+    assert status == 200 and body["agent_status"] == "ok" and body["answer"] == ""
+    assert [a["id"] for a in body["activities"]] == ["robo"]
+
+
 def test_endpoint_returns_cards_and_leaves_the_data_unchanged(tmp_path, monkeypatch):
     pytest.importorskip("flask")
     data = tmp_path / "courses.json"

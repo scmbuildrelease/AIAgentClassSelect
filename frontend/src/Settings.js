@@ -4,7 +4,8 @@ import { LANGS, categoryLabel } from "./i18n";
 const AGES = Array.from({ length: 16 }, (_, i) => i + 3);
 
 function StatusRow({ label, state, detail, t }) {
-  const text = { ok: t.ok, unavailable: t.unavailable, off: t.off, checking: t.checking }[state] || state;
+  const text = { ok: t.ok, unavailable: t.unavailable, off: t.off, checking: t.checking,
+                 not_checked: t.notChecked }[state] || state;
   return (
     <div className="status-row">
       <span>{label}</span>
@@ -33,6 +34,7 @@ function Settings({ lang, setLang, t, prefs, setPrefs, options, savedCount, onCl
     ...p, categories: p.categories.includes(k) ? p.categories.filter(x => x !== k) : [...p.categories, k] }));
   const ai = health && health.ai;
   const aiState = !health ? "checking" : !ai.enabled ? "off" : ai.ollama === "ok" ? "ok" : "unavailable";
+  const aiConfigError = ai && ai.enabled && ai.ollama === "not_checked" && ai.error;  // invalid AI_* settings
 
   return (
     <section aria-labelledby="settings-title">
@@ -82,16 +84,17 @@ function Settings({ lang, setLang, t, prefs, setPrefs, options, savedCount, onCl
                    detail={health && (health.data.available
                      ? t.activitiesN(health.data.activities, (health.data.last_checked || "").slice(0, 10))
                      : health.data.error)} />
-        <StatusRow t={t} label={t.aiAgent} state={!health ? "checking" : ai.enabled ? "ok" : "off"}
-                   detail={ai && ai.enabled ? ai.model : null} />
-        <StatusRow t={t} label={t.ollama} state={aiState} detail={ai && ai.error} />
+        <StatusRow t={t} label={t.aiAgent} state={!health ? "checking" : !ai.enabled ? "off" : aiConfigError ? "unavailable" : "ok"}
+                   detail={aiConfigError || (ai && ai.enabled ? ai.model : null)} />
+        <StatusRow t={t} label={t.ollama} state={aiConfigError ? "not_checked" : aiState} detail={aiConfigError ? null : ai && ai.error} />
         <button type="button" className="secondary" onClick={check}>{t.refresh}</button>
       </div>
 
       <h3 className="group-title">{t.privacy}</h3>
       <div className="group">
         <p className="hint">{t.privacyNote}</p>
-        {savedCount > 0 && <button type="button" className="secondary danger" onClick={onClearSaved}>
+        {savedCount > 0 && <button type="button" className="secondary danger"
+                                   onClick={() => window.confirm(t.confirmClear(savedCount)) && onClearSaved()}>
           {t.clearSaved} ({savedCount})</button>}
       </div>
     </section>

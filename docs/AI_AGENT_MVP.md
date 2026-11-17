@@ -1,5 +1,9 @@
 # Kids Activity AI Agent — MVP
 
+> Design record of the agent, first written for commit `6ba91c9` and kept current for the agent itself. The app
+> around it has since become a four-tab mobile UI (the AI Assistant is one tab); see the [README](../README.md) and
+> [INSTALL_MAC.md](INSTALL_MAC.md) for installation and the network setup.
+
 A small tool-calling agent on top of the existing activity tracker. A **local** Qwen model, served by the
 Ollama app already installed on the Mac (the same one CIRCA uses), reads a parent's question, **chooses which
 Python tools to call**, reads their results, and writes a short answer. Everything runs on the machine:
@@ -8,7 +12,7 @@ there are no API keys, no cloud model and no cloud fallback.
 ## Architecture
 
 ```
-React "AI Assistant" panel (frontend/src/Assistant.js)
+React "AI Assistant" tab (frontend/src/Assistant.js)
    │  POST /agent/chat {"message", "lang"}
    ▼
 Flask backend/app.py ── load_courses() (same list as GET /courses: no past or adult activities)
@@ -49,8 +53,11 @@ only, and temperature 0.
 | `AI_PROVIDER` | `ollama` | The only accepted value. Anything else is refused; there is no cloud provider. |
 | `AI_MODEL` | `qwen2.5:1.5b` | The Qwen model already installed for CIRCA on the original Mac. A new Mac pulls it with `ollama pull qwen2.5:1.5b` (or a larger model; see [INSTALL_MAC.md](INSTALL_MAC.md)). |
 | `AI_BASE_URL` | `http://localhost:11434` | In Docker: `http://host.docker.internal:11434` (set by `docker-compose.yml`) |
-| `AI_TIMEOUT` | `120` | Seconds per model call |
-| `AI_MAX_ITERATIONS` | `5` | Model calls per request |
+| `AI_TIMEOUT` | `120` | Seconds per model call (above 0, at most 3600) |
+| `AI_MAX_ITERATIONS` | `5` | Model calls per request (1–20) |
+
+An invalid `AI_TIMEOUT` or `AI_MAX_ITERATIONS` is reported (`agent_status: "error"`, HTTP 503, and in `GET /health`)
+and the model is not called; the app does not silently fall back to a default.
 
 Verified locally on 2026-11-16:
 - Ollama **0.40.11**.
@@ -128,7 +135,7 @@ curl -s -X POST localhost:8000/agent/chat -H 'Content-Type: application/json' \
 ```bash
 ollama list                         # Ollama app running on the Mac, qwen2.5:1.5b installed
 docker compose up --build -d
-open http://localhost:3000          # "AI Assistant (local model)" panel above the activity list
+open http://localhost:3000          # AI Assistant tab
 docker compose down                 # when finished
 ```
 
@@ -145,7 +152,9 @@ The backend container reaches the host's Ollama at `http://host.docker.internal:
 | `no Ollama server is reachable at …` | Start the Ollama app (or `ollama serve`). In Docker, check `AI_BASE_URL` is `http://host.docker.internal:11434`. |
 | `model 'X' is not installed … (installed: …)` | Set `AI_MODEL` to an installed model (`ollama list`), or `ollama pull X` |
 | `The AI assistant is turned off` | `AI_ENABLED=true` (Compose sets it by default) |
-| `did not answer within 120s` | The first call loads the model into memory; retry, or raise `AI_TIMEOUT` |
+| `did not answer within 120 seconds (AI_TIMEOUT)` | The first call loads the model into memory; retry, use a smaller model, or raise `AI_TIMEOUT` |
+| `does not support tool calling` | The configured model can't call tools; choose a tool-calling model (e.g. the qwen2.5 family) |
+| `Invalid AI configuration: …` | Fix `AI_TIMEOUT` / `AI_MAX_ITERATIONS` in `.env`, then `docker compose up -d` |
 | Answer text is wrong but cards look right | Expected occasionally with a 1.5B model: trust the cards and links. A larger Qwen (`AI_MODEL=qwen2.5:7b` after `ollama pull qwen2.5:7b`, about 4.7 GB) follows instructions better; not tested here. |
 
 ## Example prompts
@@ -205,6 +214,11 @@ The backend container reaches the host's Ollama at `http://host.docker.internal:
   which the prompt includes; small models get this wrong at times.
 - **Search is the existing keyword and glossary search.** It is not semantic: topics outside the glossary match
   only literally.
-- **Answer language** follows the user's language most of the time, but the model doesn't guarantee it.
-- **UI checks:** the assistant panel was verified by compiling the frontend and calling the endpoint through its
-  proxy. It was not clicked through in a browser for this document.
+- **Answer language** follows the user's language most of the time, but the model doesn't guarantee it. The
+  app's display language is passed to the model ("answer in Traditional Chinese" for 繁體中文), but in Phase 5 tests
+  `qwen2.5:1.5b` still answered questions asked in Traditional Chinese in **Simplified** Chinese. The interface,
+  cards and trace are in the chosen script; only the model's summary text is affected.
+- **Translation of names in the summary:** the 1.5B model sometimes mistranslates venue or provider names into
+  Chinese. The cards show the names exactly as published.
+- **UI checks:** the AI Assistant tab has been exercised in headless Chrome against the real backend and Ollama
+  (Phases 2–5). It has not been verified on a physical iPhone yet ([PHASE5_IPHONE_TEST.md](PHASE5_IPHONE_TEST.md)).
