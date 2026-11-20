@@ -93,6 +93,7 @@ the app to the internet.
 | [docs/INSTALL_MAC.md](docs/INSTALL_MAC.md) | Installation, iPhone access, security, troubleshooting |
 | [docs/AI_AGENT_MVP.md](docs/AI_AGENT_MVP.md) | AI agent design, tools, configuration, limitations |
 | [docs/PHASE5_IPHONE_TEST.md](docs/PHASE5_IPHONE_TEST.md) | Manual acceptance checklist (iPhone, second Mac) |
+| [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) | Step-by-step demo script (Mac browser, AI Assistant, iPhone) |
 | [docs/AI_TECHNOLOGY_AUDIT.md](docs/AI_TECHNOLOGY_AUDIT.md) | Audit of the AI technology (snapshot) |
 
 # Activity tracker
