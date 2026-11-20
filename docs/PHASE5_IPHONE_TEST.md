@@ -4,6 +4,9 @@ Use this to check the app on a real iPhone (and, if available, a second Mac). Ma
 iPhone model, iOS version and anything odd. Nothing in the "Physical iPhone" and "Second Mac" sections has been
 tested yet.
 
+This checklist is the physical-device acceptance step for **v0.1.0 (Local Mac MVP)**; see
+[V0.1.0_READINESS_REPORT.md](V0.1.0_READINESS_REPORT.md).
+
 ## What was already tested, and where
 
 | Kind | What | Status |

@@ -1,4 +1,4 @@
-# Install and run on a Mac (personal edition)
+# Install and run on a Mac (v0.1.0 — Local Mac MVP)
 
 The app runs on one Mac with Docker. You open it in a browser on that Mac, or on an iPhone (or any other phone,
 tablet or computer) connected to the same Wi-Fi network. Nothing is put on the internet: there is no cloud server,

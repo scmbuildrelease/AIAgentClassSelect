@@ -3,6 +3,15 @@
 Find kids' classes, camps and activities in the **San Francisco Bay Area**, from your Mac and your iPhone,
 with an optional AI assistant that runs entirely on your own computer.
 
+> **v0.1.0 — Local Mac MVP.** Docker, React, Flask, Ollama and Qwen on one Mac, with iPhone Safari support.
+> - **Local AI.** Inference runs on the Mac (Ollama, `qwen2.5:1.5b`); no cloud AI service or API key is needed.
+> - **iPhone over Wi-Fi.** The iPhone opens the Mac's frontend (port 3000) over the same Wi-Fi.
+> - **Private backend.** The backend and Ollama are not exposed to the LAN.
+> - **Roadmap.** AWS SaaS (cloud hosting, accounts, multi-user) is planned for **v1.0.0** and is not part of
+>   this release.
+>
+> Start with the [demo guide](docs/DEMO_GUIDE.md) and the [known limitations](docs/KNOWN_LIMITATIONS.md).
+
 The project has two parts:
 
 1. **A personal app** you run on your Mac with Docker and open in a browser on the Mac or on an iPhone on the same
@@ -77,8 +86,10 @@ the app to the internet.
 - **Bay Area only.** The included data covers the San Francisco Bay Area. Other regions need new sources (see
   [Adding sources](#adding-sources-cities-categories-ages)) and a discovery run.
 - **Data freshness** depends on when the discovery workflow was last run (Settings shows the last check date).
-- **The AI summary can be wrong** (the tested `qwen2.5:1.5b` sometimes misses a filter, mistranslates names, or
-  answers a Traditional Chinese question in Simplified Chinese). Trust the cards and official pages.
+- **The AI can pick the wrong activities or summarize them wrongly.** The tested `qwen2.5:1.5b` can choose the
+  wrong tool, skip age or date filters in plain-language questions, mistranslate names, or answer a Traditional
+  Chinese question in Simplified Chinese. The cards are always real records; check them and the official pages.
+  Details and examples: [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md).
 - **No accounts or sync.** Saved activities are per browser and device.
 - **Development web server.** The frontend runs on the Create React App development server, which is no longer
   maintained; fine for a trusted home network, not for public hosting.
@@ -90,10 +101,13 @@ the app to the internet.
 
 | Document | Contents |
 |---|---|
+| [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) | v0.1.0 demo: setup, Mac browser, iPhone Safari, verified AI prompts |
 | [docs/INSTALL_MAC.md](docs/INSTALL_MAC.md) | Installation, iPhone access, security, troubleshooting |
 | [docs/AI_AGENT_MVP.md](docs/AI_AGENT_MVP.md) | AI agent design, tools, configuration, limitations |
+| [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) | What v0.1.0 does not do reliably, with observed examples |
 | [docs/PHASE5_IPHONE_TEST.md](docs/PHASE5_IPHONE_TEST.md) | Manual acceptance checklist (iPhone, second Mac) |
-| [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md) | Step-by-step demo script (Mac browser, AI Assistant, iPhone) |
+| [docs/V0.1.0_READINESS_REPORT.md](docs/V0.1.0_READINESS_REPORT.md) | v0.1.0 test evidence and status |
+| [docs/RELEASE_NOTES_v0.1.0_DRAFT.md](docs/RELEASE_NOTES_v0.1.0_DRAFT.md) | Draft release notes (not published) |
 | [docs/AI_TECHNOLOGY_AUDIT.md](docs/AI_TECHNOLOGY_AUDIT.md) | Audit of the AI technology (snapshot) |
 
 # Activity tracker

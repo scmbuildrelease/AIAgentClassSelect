@@ -159,6 +159,9 @@ The backend container reaches the host's Ollama at `http://host.docker.internal:
 
 ## Example prompts
 
+These are from development testing. For the v0.1.0 demo, use the prompts verified live in
+[DEMO_GUIDE.md](DEMO_GUIDE.md#7-ai-agent-demonstration).
+
 - `Robotics for an 8 year old in San Jose`
 - `Any events in San Francisco between 2026-11-20 and 2026-11-22?`
 - `圣何塞有中文学校吗？`
@@ -198,6 +201,8 @@ The backend container reaches the host's Ollama at `http://host.docker.internal:
 - **Data untouched:** `data/courses.json` was unchanged afterwards.
 
 ## Limitations
+
+The v0.1.0 list, with the examples observed in live testing, is in [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md).
 
 - **The answer text comes from a small model.** In manual runs, `qwen2.5:1.5b` sometimes:
   - added an unrequested category, which can give "none found" (the tool result then tells it to retry with
